@@ -129,7 +129,7 @@ Criterio de aceptación: con `~/.hermes` renombrado temporalmente, `python -c
 "from magnific_client import Magnific; print(Magnific().account_balance())"`
 devuelve el saldo.
 
-### Fase 2 — Catálogo de modelos sin agente
+### Fase 2 — Catálogo de modelos sin agente — HECHA
 
 `refresh_magnific_models.py` hoy le pide a un LLM que llame a `images_models_list`
 y `simulate_cost` y devuelva JSON, y luego rebusca el JSON entre la prosa. Es el
@@ -138,7 +138,7 @@ mismo antipatrón que ya se corrigió en la generación, y el cliente propio ya 
 sobre modelos × resoluciones. Menos código, sin timeouts de 30 min, sin
 `.magnific_models_last_output.log`.
 
-### Fase 3 — Semáforo de estado sin CLI
+### Fase 3 — Semáforo de estado sin CLI — HECHA
 
 `dashboard/src/pages/api/magnific-status.ts` deja de hacer `execFileSync` sobre un
 binario en `/Users/danimoyalya2/.local/bin/hermes` (ruta que, dicho sea de paso,
@@ -343,3 +343,15 @@ acotado, y no como *conductor* de todo el proceso, que es donde duele.
    Guía HTML de traspaso como entregable de la fase 6.
 3. **Cazador programado en las dos máquinas**, con horarios escalonados, y con
    interruptor de pausa e botón de parada en el dashboard (fase 4).
+
+## 8. Dónde queda Hermes (20/08/2026)
+
+Tras las fases 0-3, solo quedan **dos invocaciones reales** del binario:
+
+| Dónde | Qué | Fase que lo quita |
+|---|---|---|
+| `dashboard/src/pages/api/hunt-now.ts:12` | `hermes cron run` | 4 |
+| `scripts/generate_redesign.py:522` | `hermes chat -q` (motor `agent`) | 5 |
+
+El resto de menciones son prosa, la ruta de compatibilidad de
+`default_token_dir()` y las pruebas que la cubren.
