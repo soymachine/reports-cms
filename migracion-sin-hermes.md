@@ -149,7 +149,7 @@ devuelve `{ok, status, balance}` distinguiendo `connected` / `auth_required` /
 `error` por **excepción tipada** (`MagnificAuthError`), no por buscar `✓` y `OAuth`
 en un texto. Se mantiene la caché de 60 s.
 
-### Fase 4 — El cazador nocturno (determinista)
+### Fase 4 — El cazador nocturno (determinista) — HECHA
 
 **Decisión tomada: sin agente.** El cazador pasa a ser `scripts/hunt.py`, Python
 puro, sin LLM. Ventajas e inconvenientes comparados más abajo (§5).
@@ -212,7 +212,7 @@ Como es determinista, "gasto doble" aquí solo significa ancho de banda y algún
 lead repetido: sin agente no hay coste por token. Esa es, de hecho, la razón más
 práctica para elegir determinista mientras estáis en desarrollo.
 
-### Fase 5 — Borrar el motor `agent`
+### Fase 5 — Borrar el motor `agent` — HECHA
 
 Quitar de `generate_redesign.py` el bloque `--engine agent` (líneas ~509-549),
 `PROMPT_TEMPLATE`, `parse_credits()` sobre prosa y el fallback de la línea 492.

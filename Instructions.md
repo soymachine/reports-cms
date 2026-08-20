@@ -50,7 +50,7 @@ Flujo de trabajo:
 - **Dashboard**: Astro 4, React 18, Tailwind 3, `better-sqlite3`, GSAP, `lucide-react`.
 - **Render PDF**: `pdftoppm` (poppler).
 - **Generación imágenes**: MCP `magnific` por llamada directa (`scripts/magnific_client.py`).
-- **Buscador**: DuckDuckGo Lite con `curl` (el agente nocturno no usa `web_search` de Hermes porque no está configurado).
+- **Buscador**: DuckDuckGo Lite (`scripts/pdf_finder.py` para PDFs, `scripts/hunt.py` para leads nuevos).
 
 ## 4. Cómo arrancar
 
@@ -93,9 +93,13 @@ npm run build      # verificar antes de entregar
 ### Cron
 
 ```bash
-hermes cron run d28024ce08c5     # manual
-hermes cron pause d28024ce08c5   # pausar
+./scripts/install_hunter.command 03:30       # programar (launchd)
+.venv/bin/python scripts/hunt.py             # una ronda a mano
+.venv/bin/python scripts/hunt.py --dry-run   # sin escribir en la base
 ```
+
+Pausar: interruptor «Cazador automático» del panel, o
+`settings.json → hunter.enabled: false`.
 
 ## 5. Modelo de datos
 
@@ -261,7 +265,6 @@ Registra el resultado en `leads.generated`. Lee `settings.json` para `max_pages`
 
 ## 11. Recursos importantes
 
-- Documentación Hermes: https://hermes-agent.nousresearch.com/docs
 - Skill `lead-pipeline` (estructura base del proyecto).
 - Skill `impeccable` (pulida visual/UI).
 - Skill `shadcn-ui` / `astro-shadcn-webapp` si se añaden nuevos componentes.

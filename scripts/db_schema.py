@@ -36,11 +36,25 @@ CREATE TABLE IF NOT EXISTS jobs (
 )
 """
 
+# El historial del cazador nocturno. Lo escribía el agente de Hermes desde fuera
+# del repo, así que la tabla nunca se creó aquí y en una máquina nueva no existía:
+# los endpoints que la leen van envueltos en try/catch por eso mismo.
+CRON_HISTORY_TABLE = """
+CREATE TABLE IF NOT EXISTS cron_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  job TEXT NOT NULL,                  -- lead_hunter
+  ran_at TEXT DEFAULT (datetime('now')),
+  summary TEXT,                       -- una línea legible: qué encontró
+  detail TEXT                         -- JSON: consultas, candidatos, descartes
+)
+"""
+
 INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_jobs_lead ON jobs(lead_id)",
     "CREATE INDEX IF NOT EXISTS idx_jobs_state ON jobs(state)",
     "CREATE INDEX IF NOT EXISTS idx_jobs_type_created ON jobs(type, created_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_leads_domain ON leads(website_domain)",
+    "CREATE INDEX IF NOT EXISTS idx_cron_history_ran ON cron_history(ran_at DESC)",
 ]
 
 
@@ -56,6 +70,10 @@ def migrate(conn: sqlite3.Connection) -> list[str]:
     conn.execute(JOBS_TABLE)
     if "jobs" not in before:
         applied.append("table jobs")
+
+    conn.execute(CRON_HISTORY_TABLE)
+    if "cron_history" not in before:
+        applied.append("table cron_history")
 
     for idx in INDEXES:
         conn.execute(idx)

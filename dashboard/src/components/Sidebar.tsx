@@ -1,11 +1,19 @@
 import React from 'react';
-import { Search, Moon, Sun, Radar, FileText, Sparkles, Users, Loader2, CircleDot, ScrollText, Activity, Copy, BarChart3, Gauge, Coins } from 'lucide-react';
+import { Search, Moon, Sun, Radar, FileText, Sparkles, Users, Loader2, CircleDot, ScrollText, Activity, Copy, BarChart3, Gauge, Coins, Square } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import CronLogsModal from './CronLogsModal';
 import type { StatsResponse } from '../lib/types';
 import { fmtDate } from '../lib/types';
 
 type MagnificStatus = 'loading' | 'connected' | 'auth_required' | 'error';
+
+interface HuntStatus {
+  running: boolean;
+  enabled: boolean;
+  max_new_leads: number;
+  schedule: string | null;
+  last_run: { ran_at: string; summary: string } | null;
+}
 
 function MagnificDot() {
   const [status, setStatus] = React.useState<MagnificStatus>('loading');
@@ -171,24 +179,51 @@ export default function Sidebar({ stats, filters, onFilters, theme, onToggleThem
 
   const [hunting, setHunting] = React.useState(false);
   const [huntMsg, setHuntMsg] = React.useState<string | null>(null);
+  const [hunt, setHunt] = React.useState<HuntStatus | null>(null);
   const [logsOpen, setLogsOpen] = React.useState(false);
 
   const set = (patch: Partial<Filters>) => onFilters({ ...filters, ...patch });
 
-  const huntNow = async () => {
+  const refreshHunt = React.useCallback(async () => {
+    try {
+      setHunt(await (await fetch('/api/hunt-status')).json());
+    } catch {
+      /* el panel sigue siendo usable sin el estado del cazador */
+    }
+  }, []);
+
+  // mientras hay una ronda viva conviene mirar más a menudo, para que el botón
+  // de detener aparezca y desaparezca cuando toca
+  React.useEffect(() => {
+    refreshHunt();
+    const every = hunt?.running ? 3_000 : 30_000;
+    const t = setInterval(refreshHunt, every);
+    return () => clearInterval(t);
+  }, [refreshHunt, hunt?.running]);
+
+  const post = async (url: string, body?: unknown) => {
     setHunting(true);
     setHuntMsg(null);
     try {
-      const res = await fetch('/api/hunt-now', { method: 'POST' });
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      });
       const data = await res.json();
-      setHuntMsg(data.ok ? `✓ ${data.message ?? 'Lanzado'}` : `✗ ${data.error ?? 'error'}`);
+      setHuntMsg(data.ok ? `✓ ${data.message ?? 'hecho'}` : `✗ ${data.error ?? 'error'}`);
     } catch (e) {
       setHuntMsg(`✗ ${String(e)}`);
     } finally {
       setHunting(false);
+      refreshHunt();
       setTimeout(() => setHuntMsg(null), 6000);
     }
   };
+
+  const huntNow = () => post('/api/hunt-now');
+  const huntStop = () => post('/api/hunt-stop');
+  const huntToggle = () => post('/api/hunt-toggle', { enabled: !(hunt?.enabled ?? true) });
 
   const prioEntries = stats ? Object.entries(stats.by_priority).sort() : [];
 
@@ -375,23 +410,53 @@ export default function Sidebar({ stats, filters, onFilters, theme, onToggleThem
               {stats?.settings.cron_description ?? 'Búsqueda diaria de leads'}
             </div>
             <div className="text-[10px] text-muted">
-              cron <span className="text-zinc-800 dark:text-zinc-200">{stats?.settings.cron_schedule ?? '—'}</span>
-              {' · '}job <span className="text-zinc-800 dark:text-zinc-200">{stats?.settings.cron_job_id ?? '—'}</span>
+              cron <span className="text-zinc-800 dark:text-zinc-200">{hunt?.schedule ?? stats?.settings.cron_schedule ?? '—'}</span>
+              {' · '}hasta <span className="text-zinc-800 dark:text-zinc-200">{hunt?.max_new_leads ?? 5}</span> leads por ronda
             </div>
+
+            {/* El interruptor decide si vuelve a saltar; el botón de abajo, la ronda de ahora */}
+            <button
+              onClick={huntToggle}
+              disabled={hunting}
+              title={hunt?.enabled === false
+                ? 'Pausado: el programador dispara, pero la ronda sale sola'
+                : 'Activo: buscará leads en cada ejecución programada'}
+              className="w-full flex items-center justify-between rounded-lg border border-subtle px-2 py-1.5 text-[11px] transition-all duration-200 hover:shadow-sm disabled:opacity-50 cursor-pointer"
+            >
+              <span className="text-muted">Cazador automático</span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className={`inline-block w-1.5 h-1.5 rounded-full ${
+                  hunt?.enabled === false ? 'bg-zinc-400' : 'bg-emerald-500'}`} />
+                <span className="text-zinc-800 dark:text-zinc-200">
+                  {hunt?.enabled === false ? 'en pausa' : 'activo'}
+                </span>
+              </span>
+            </button>
             {stats?.last_cron && (
               <div className="text-[10px] text-muted border-t border-subtle pt-2">
                 última ejecución: <span className="text-zinc-800 dark:text-zinc-200">{fmtDate(stats.last_cron.ran_at)}</span>
                 {stats.last_cron.summary && <div className="mt-0.5 line-clamp-2">{stats.last_cron.summary}</div>}
               </div>
             )}
-            <button
-              onClick={huntNow}
-              disabled={hunting}
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 text-white px-3 py-1.5 text-xs transition-all duration-200 hover:bg-emerald-500 hover:scale-[1.02] active:scale-[0.97] shadow-sm hover:shadow-md disabled:opacity-50"
-            >
-              {hunting ? <Loader2 size={12} className="animate-spin" /> : <Radar size={12} />}
-              Buscar leads ahora
-            </button>
+            {hunt?.running ? (
+              <button
+                onClick={huntStop}
+                disabled={hunting}
+                title="Aborta la búsqueda en curso"
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-rose-500/40 text-rose-600 dark:text-rose-400 px-3 py-1.5 text-xs transition-all duration-200 hover:bg-rose-500/10 hover:scale-[1.02] active:scale-[0.97] disabled:opacity-50 cursor-pointer"
+              >
+                <Square size={11} /> Detener búsqueda
+              </button>
+            ) : (
+              <button
+                onClick={huntNow}
+                disabled={hunting}
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 text-white px-3 py-1.5 text-xs transition-all duration-200 hover:bg-emerald-500 hover:scale-[1.02] active:scale-[0.97] shadow-sm hover:shadow-md disabled:opacity-50 cursor-pointer"
+              >
+                {hunting ? <Loader2 size={12} className="animate-spin" /> : <Radar size={12} />}
+                Buscar leads ahora
+              </button>
+            )}
             {huntMsg && <div className="text-[10px] text-muted">{huntMsg}</div>}
           </div>
         </section>

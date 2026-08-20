@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Cazador nocturno de leads. Plantilla: scripts/install_hunter.command sustituye
+  __PROJECT_ROOT__, __HOUR__ y __MINUTE__ y la instala en ~/Library/LaunchAgents.
+
+  launchd en vez de crontab porque StartCalendarInterval recupera la ejecución si
+  la máquina estaba dormida a la hora prevista, que en un portátil es lo normal.
+
+  Pausar el cazador NO se hace aquí: se hace con el interruptor del panel
+  (settings.json → hunter.enabled), y hunt.py sale solo. Descargar el agente
+  requiere permisos, falla en silencio y luego nadie recuerda cómo recargarlo.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.thinkthings.leadhunter</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__PROJECT_ROOT__/.venv/bin/python</string>
+        <string>__PROJECT_ROOT__/scripts/hunt.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__PROJECT_ROOT__</string>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>__HOUR__</integer>
+        <key>Minute</key>
+        <integer>__MINUTE__</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>__PROJECT_ROOT__/logs/hunter.log</string>
+    <key>StandardErrorPath</key>
+    <string>__PROJECT_ROOT__/logs/hunter.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

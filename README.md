@@ -83,13 +83,21 @@ npm --prefix dashboard run build && bash tests/smoke_api.sh   # endpoints vivos
 
 ## Agente nocturno (cron)
 
-`ThinkThings Lead Hunter` (`d28024ce08c5`) — cada día 02:00 busca hasta 5 leads
-nuevos con curl + DuckDuckGo Lite, dedupe por nombre, inserta con `source=agent`.
+`scripts/hunt.py` — cada noche busca hasta 5 leads nuevos en DuckDuckGo Lite,
+descarta agregadores y lo que ya está en la base (por nombre normalizado y por
+dominio) e inserta con `source=agent` y estado `Not contacted`. Sin agente y sin
+LLM: no cuesta nada por ejecución y hace lo mismo en las dos máquinas.
 
 ```bash
-hermes cron run d28024ce08c5     # ejecución manual
-hermes cron pause d28024ce08c5   # pausar
+./scripts/install_hunter.command 03:30   # programar con launchd
+./scripts/install_hunter.command --uninstall
+.venv/bin/python scripts/hunt.py --dry-run   # ver qué insertaría
 ```
+
+Desde el panel: **Buscar leads ahora** lanza una ronda, **Detener búsqueda**
+aborta la que esté corriendo y el interruptor **Cazador automático** decide si
+vuelve a saltar. Pausado, launchd sigue disparando y la ronda sale sola: pausar
+es tocar un fichero, no el sistema.
 
 ## Requisito: Magnific OAuth
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""lead_mgr.py — CLI for Hermes agents to operate on the ThinkThings leads DB.
+"""lead_mgr.py — CLI to operate on the ThinkThings leads DB from a terminal.
 
-All commands output JSON. Agents use this CLI; the dashboard uses its own API.
+All commands output JSON. Scripts and people use this CLI; the dashboard uses its
+own API.
 
 Usage:
   python3 lead_mgr.py add --organisation "..." [--country ...] [--sector ...] ...

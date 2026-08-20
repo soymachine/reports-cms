@@ -1,9 +1,22 @@
 {
   "project": "ThinkThings Reports Leads",
   "cron": {
-    "lead_hunter_job_id": "d28024ce08c5",
     "schedule": "0 2 * * *",
-    "description": "Búsqueda diaria de nuevos leads a las 02:00"
+    "description": "Búsqueda diaria de nuevos leads a las 02:00 (scripts/hunt.py vía launchd)"
+  },
+  "hunter": {
+    "enabled": true,
+    "max_new_leads": 5,
+    "schedule": "0 2 * * *",
+    "_comment": "Cazador nocturno determinista (scripts/hunt.py). `enabled: false` lo pausa sin tocar launchd: el programador sigue disparando y la ronda sale sola. Las consultas son la única fuente de leads nuevos: edítalas a tu criterio.",
+    "queries": [
+      "\"european association\" energy transition annual report 2026",
+      "\"european federation\" transport policy annual report",
+      "EU health alliance \"annual report\" association Brussels",
+      "\"european association\" agriculture sustainability report 2026",
+      "european finance federation \"annual report\" members association",
+      "\"asociación europea\" informe anual sostenibilidad"
+    ]
   },
   "pdf_finder": {
     "max_pdfs_per_search": 3,

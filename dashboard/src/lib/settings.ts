@@ -11,6 +11,13 @@ export interface StylePreset {
 export interface Settings {
   project?: string;
   cron?: { lead_hunter_job_id?: string; schedule?: string; description?: string };
+  /** cazador nocturno: `enabled: false` lo pausa sin tocar el programador */
+  hunter?: {
+    enabled?: boolean;
+    max_new_leads?: number;
+    schedule?: string;
+    queries?: string[];
+  };
   pdf_finder?: { max_pdfs_per_search?: number; min_pages?: number; crawl_site?: boolean };
   redesign?: {
     max_pages?: number;
