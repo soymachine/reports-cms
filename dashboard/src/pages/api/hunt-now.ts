@@ -28,15 +28,23 @@ export const POST: APIRoute = async () => {
   const python = path.join(PROJECT_ROOT, '.venv', 'bin', 'python');
   const script = path.join(PROJECT_ROOT, 'scripts', 'hunt.py');
   try {
+    // Al mismo registro que escribe launchd: una ronda lanzada a mano tiene que
+    // poder mirarse igual que una nocturna. Con stdio 'ignore' su salida se
+    // perdía y desde fuera no había forma de saber por qué no encontró nada.
+    fs.mkdirSync(path.join(PROJECT_ROOT, 'logs'), { recursive: true });
+    const log = fs.openSync(path.join(PROJECT_ROOT, 'logs', 'hunter.log'), 'a');
+    fs.writeSync(log, `\n--- ${new Date().toISOString()} · lanzado desde el panel\n`);
+
     // --ignore-pause: pulsar el botón es una orden explícita, y saltársela
     // porque el cazador automático está pausado sería desobedecer al usuario.
     const child = spawn(python, [script, '--ignore-pause'], {
       cwd: PROJECT_ROOT,
       detached: true,
-      stdio: 'ignore',
+      stdio: ['ignore', log, log],
     });
     child.unref();
-    return Response.json({ ok: true, pid: child.pid, message: 'búsqueda lanzada' });
+    fs.closeSync(log);              // el hijo conserva su propio descriptor
+    return Response.json({ ok: true, pid: child.pid, message: 'búsqueda lanzada · logs/hunter.log' });
   } catch (err) {
     return Response.json({ ok: false, error: String(err) }, { status: 500 });
   }
