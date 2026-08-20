@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import BeforeAfterModal from './BeforeAfterModal';
 import type { Lead, PageThumb, StylePreset, GeneratedItem, PdfItem, PaletteColor, MagnificModel, ModelCatalogResponse } from '../lib/types';
 import { fileUrl, fmtDate, decodeHtml, creditsPerImage } from '../lib/types';
-import { composeCurrent, composeRun, runLabel, runsOf } from '../lib/runs';
+import { composeCurrent, composeRun, itemKey, overwritten, runIsLost, runLabel, runsOf } from '../lib/runs';
 import { Badge, priorityVariant } from './ui/badge';
 
 interface Props {
@@ -203,6 +203,12 @@ function PdfGallery({
     if (run !== 'current' && !runs.some((r) => r.key === run)) setRun('current');
   }, [runs, run]);
 
+  // Los rediseños anteriores al archivado de versiones comparten fichero con el
+  // que los sustituyó: sus píxeles ya no existen y conmutar a ese pase no puede
+  // cambiar nada. Hay que decirlo, no dejar que parezca que el botón no funciona.
+  const lost = React.useMemo(() => overwritten(generated, pdfSlug, active),
+                             [generated, pdfSlug, active]);
+
   const viewingOld = run !== 'current';
   const currentRun = runs.find((r) => r.key === run);
   const runTitle = currentRun ? `Pase ${runs.length - currentRun.ordinal + 1}` : null;  // ordinal 1 = el más nuevo
@@ -370,7 +376,9 @@ function PdfGallery({
                 <button
                   key={r.key}
                   onClick={() => setRun(r.key)}
-                  title={`Cómo se veía tras esta generación · páginas ${r.pages.join(', ')}`}
+                  title={runIsLost(r, lost)
+                    ? `Las imágenes de este pase se sobrescribieron: se generaron antes de que se archivaran las versiones, así que en disco solo queda la más reciente · páginas ${r.pages.join(', ')}`
+                    : `Cómo se veía tras esta generación · páginas ${r.pages.join(', ')}`}
                   className={`text-[10px] rounded-md border px-2 py-1 transition-all duration-200 hover:scale-[1.03] active:scale-95 cursor-pointer ${
                     run === r.key || (runs.length === 1 && !viewingOld)
                       ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
@@ -378,6 +386,11 @@ function PdfGallery({
                   }`}
                 >
                   Pase {i + 1} <span className="text-zinc-400 dark:text-zinc-600">· {runLabel(r)}</span>
+                  {runIsLost(r, lost) && (
+                    <span className="ml-1 text-amber-600 dark:text-amber-500" title="imágenes sobrescritas">
+                      ⚠
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -387,8 +400,9 @@ function PdfGallery({
             <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-amber-500/50 bg-amber-500/5 px-2 py-1.5 text-[10px] text-amber-700 dark:text-amber-400">
               <History size={11} className="shrink-0" />
               <span>
-                Estás viendo un pase anterior. El PDF comparativo y el ganador se
-                aplican a lo que ves aquí, no a lo vigente.
+                {currentRun && runIsLost(currentRun, lost)
+                  ? 'Las imágenes de este pase se sobrescribieron: se generaron antes de que se archivaran las versiones, así que en disco solo queda la más reciente. Lo que ves debajo es la vigente, no la de entonces.'
+                  : 'Estás viendo un pase anterior. El PDF comparativo y el ganador se aplican a lo que ves aquí, no a lo vigente.'}
               </span>
             </div>
           )}
@@ -571,6 +585,14 @@ function PdfGallery({
                     </button>
                   </span>
                   <span className="inline-flex items-center gap-1.5 min-w-0">
+                    {viewingOld && lost.has(itemKey(g)) && (
+                      <span
+                        className="shrink-0 rounded bg-amber-500/15 px-1 py-px text-[9px] text-amber-700 dark:text-amber-500"
+                        title="El fichero de esta página se sobrescribió: estás viendo la versión actual"
+                      >
+                        sobrescrita
+                      </span>
+                    )}
                     {viewingOld && inherited.has(g.generated_img) && (
                       <span
                         className="shrink-0 rounded bg-zinc-200 dark:bg-zinc-800 px-1 py-px text-[9px] text-zinc-500"

@@ -116,6 +116,41 @@ export function composeCurrent(items: GeneratedItem[], pdf: string,
     .map((item) => ({ item, fromRun: true }));
 }
 
+/** Identidad de una entrada dentro de un informe: dos entradas distintas pueden
+ *  apuntar al mismo fichero, así que la ruta sola no basta. */
+export function itemKey(item: GeneratedItem): string {
+  return `${item.created_at ?? ''}|${item.generated_img}`;
+}
+
+/**
+ * Entradas cuyos píxeles ya no existen.
+ *
+ * Hasta que `archive_previous_versions` empezó a renombrar el fichero anterior a
+ * `-vN.png`, relanzar un estilo sobrescribía la imagen: la fila del historial se
+ * conservaba, pero apuntando al mismo fichero que la nueva. Esas entradas no se
+ * pueden enseñar —enseñarían la imagen actual— y hay que decirlo, porque si no
+ * parece que conmutar de pase no hace nada.
+ */
+export function overwritten(items: GeneratedItem[], pdf: string,
+                            style: string): Set<string> {
+  const mine = items
+    .filter((g) => g.pdf === pdf && g.style === style && g.generated_img)
+    .sort((a, b) => time(b).localeCompare(time(a)));          // el más nuevo primero
+
+  const seen = new Set<string>();
+  const lost = new Set<string>();
+  for (const item of mine) {
+    if (seen.has(item.generated_img)) lost.add(itemKey(item));
+    else seen.add(item.generated_img);
+  }
+  return lost;
+}
+
+/** Un pase del que no queda ninguna imagen propia: conmutar a él no cambia nada. */
+export function runIsLost(run: Run, lost: Set<string>): boolean {
+  return run.items.length > 0 && run.items.every((g) => lost.has(itemKey(g)));
+}
+
 /**
  * Qué imagen enseñar al pasar a otra página desde la comparación grande.
  *

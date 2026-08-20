@@ -13,7 +13,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  composeCurrent, composeRun, pickForPage, runKey, runLabel, runsOf,
+  composeCurrent, composeRun, itemKey, overwritten, pickForPage, runIsLost,
+  runKey, runLabel, runsOf,
 } from '../dashboard/src/lib/runs.ts';
 import type { GeneratedItem } from '../dashboard/src/lib/types.ts';
 
@@ -195,4 +196,53 @@ test('si la página no tiene ese estilo, sirve cualquiera vigente', () => {
 
 test('una página sin ninguna imagen no devuelve nada', () => {
   assert.equal(pickForPage([], dosPases, PDF, 99, 'magazine'), null);
+});
+
+
+// --- imágenes sobrescritas antes de que existiera el archivado ---
+
+// Antes de archive_previous_versions, relanzar un estilo pisaba el fichero: las
+// dos entradas apuntan al mismo sitio y la vieja ya no se puede enseñar.
+const mismoFichero = [
+  { ...entry(1, '2026-08-18T10:00:00', null), generated_img: 'r/page-01.png', superseded: true },
+  { ...entry(2, '2026-08-18T10:00:01', null), generated_img: 'r/page-02.png', superseded: true },
+  { ...entry(1, '2026-08-19T10:00:00', null), generated_img: 'r/page-01.png' },
+  { ...entry(2, '2026-08-19T10:00:01', null), generated_img: 'r/page-02.png' },
+];
+
+test('una entrada pisada por otra posterior se detecta como perdida', () => {
+  const lost = overwritten(mismoFichero, PDF, 'magazine');
+  assert.equal(lost.size, 2);
+  assert.ok(lost.has(itemKey(mismoFichero[0])), 'la del 18 es la que se perdió');
+  assert.ok(!lost.has(itemKey(mismoFichero[2])), 'la del 19 es la que está en disco');
+});
+
+test('un pase entero sin píxeles propios se marca como perdido', () => {
+  const lost = overwritten(mismoFichero, PDF, 'magazine');
+  const runs = runsOf(mismoFichero, PDF, 'magazine');
+  assert.equal(runs.length, 2);
+  const [nuevo, viejo] = runs;                 // el más reciente primero
+  assert.equal(runIsLost(viejo, lost), true,
+    'sin esto, conmutar a ese pase no cambia nada y parece que la función está rota');
+  assert.equal(runIsLost(nuevo, lost), false);
+});
+
+test('con el archivado funcionando no se pierde nada', () => {
+  const lost = overwritten(dosPases, PDF, 'magazine');
+  assert.equal(lost.size, 0);
+  for (const run of runsOf(dosPases, PDF, 'magazine')) {
+    assert.equal(runIsLost(run, lost), false);
+  }
+});
+
+test('un pase con una sola página perdida no cuenta como perdido entero', () => {
+  const mixto = [
+    ...mismoFichero.slice(0, 2),
+    { ...entry(3, '2026-08-18T10:00:02', null), generated_img: 'r/page-03-v1.png',
+      superseded: true },
+    ...mismoFichero.slice(2),
+  ];
+  const lost = overwritten(mixto, PDF, 'magazine');
+  const viejo = runsOf(mixto, PDF, 'magazine')[1];
+  assert.equal(runIsLost(viejo, lost), false, 'todavía queda la página 3 que enseñar');
 });
