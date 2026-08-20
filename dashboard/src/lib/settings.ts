@@ -10,7 +10,7 @@ export interface StylePreset {
 
 export interface Settings {
   project?: string;
-  cron?: { lead_hunter_job_id?: string; schedule?: string; description?: string };
+  cron?: { schedule?: string; description?: string };
   /** cazador nocturno: `enabled: false` lo pausa sin tocar el programador */
   hunter?: {
     enabled?: boolean;

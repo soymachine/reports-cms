@@ -159,7 +159,6 @@ export interface StatsResponse {
     statuses: string[];
     priorities: string[];
     style_presets: StylePreset[];
-    cron_job_id: string | null;
     cron_schedule: string | null;
     cron_description: string | null;
     max_pages: number;

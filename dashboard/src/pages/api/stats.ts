@@ -65,7 +65,6 @@ export const GET: APIRoute = async () => {
       statuses: s.statuses ?? [],
       priorities: s.priorities ?? [],
       style_presets: s.redesign?.style_presets ?? [],
-      cron_job_id: s.cron?.lead_hunter_job_id ?? null,
       cron_schedule: s.cron?.schedule ?? null,
       cron_description: s.cron?.description ?? null,
       max_pages: s.redesign?.max_pages ?? 3,
