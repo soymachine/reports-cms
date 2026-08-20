@@ -1,0 +1,472 @@
+<title>ThinkThings en tu Mac</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans:wght@400&display=swap">
+
+<style>
+  /* Paleta heredada de dashboard/src/styles/global.css: mismos tokens, mismo
+     acento esmeralda. La regla del proyecto manda: IBM Plex Mono 400, sin
+     negritas en ningún sitio. La jerarquía sale del tamaño, el color y el aire. */
+  :root {
+    --ground:    #fafafa;
+    --surface:   #ffffff;
+    --ink:       #18181b;
+    --muted:     #52525b;
+    --line:      #d4d4d8;
+    --line-soft: #e4e4e7;
+    --accent:    #059669;
+    --accent-dim:#d1fae5;
+    --pending:   #b45309;
+    --pending-bg:#fef3c7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:    #0a0a0b;
+      --surface:   #18181b;
+      --ink:       #fafafa;
+      --muted:     #a1a1aa;
+      --line:      #3f3f46;
+      --line-soft: #27272a;
+      --accent:    #34d399;
+      --accent-dim:#052e23;
+      --pending:   #fbbf24;
+      --pending-bg:#2c1f05;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:    #0a0a0b;
+    --surface:   #18181b;
+    --ink:       #fafafa;
+    --muted:     #a1a1aa;
+    --line:      #3f3f46;
+    --line-soft: #27272a;
+    --accent:    #34d399;
+    --accent-dim:#052e23;
+    --pending:   #fbbf24;
+    --pending-bg:#2c1f05;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3.5rem;
+  }
+
+  code, kbd, .mono, .eyebrow, .num, .chip, h1, h2, .cmd {
+    font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-weight: 400;
+  }
+
+  /* ---------------------------------------------------------------- cabecera */
+  header { display: flex; flex-direction: column; gap: 1rem; }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(1.75rem, 5vw, 2.5rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  .lede { margin: 0; color: var(--muted); max-width: 34rem; }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line-soft);
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+
+  /* ------------------------------------------------------------------ pasos */
+  .steps { display: flex; flex-direction: column; gap: 2.5rem; }
+
+  .step {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr;
+    gap: 0 1rem;
+    align-items: start;
+  }
+
+  .num {
+    grid-row: 1 / span 3;
+    font-size: 0.8125rem;
+    color: var(--muted);
+    padding-top: 0.3rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s ease;
+  }
+  .num:hover { color: var(--accent); }
+  .num:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+
+  .step.done .num { color: var(--accent); }
+  .step.done .num::after { content: ' ✓'; }
+  .step.done h2 { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+
+  h2 {
+    grid-column: 2;
+    margin: 0 0 0.35rem;
+    font-size: 1.0625rem;
+    letter-spacing: -0.01em;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.65rem;
+  }
+
+  .step > p, .step > .cmd, .step > .note, .step > ul, .step > .table-scroll {
+    grid-column: 2;
+  }
+
+  .step p { margin: 0 0 0.75rem; color: var(--muted); }
+  .step p:last-child { margin-bottom: 0; }
+  .step ul { margin: 0 0 0.75rem; padding-left: 1.1rem; color: var(--muted); }
+  .step li { margin-bottom: 0.3rem; }
+
+  .chip {
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .chip.pending { background: var(--pending-bg); color: var(--pending); }
+
+  .cmd {
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    border-left: 2px solid var(--accent);
+    border-radius: 3px;
+    padding: 0.85rem 1rem;
+    margin: 0 0 0.85rem;
+    font-size: 0.8125rem;
+    line-height: 1.9;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--ink);
+  }
+  .cmd .c { color: var(--muted); }
+
+  code {
+    font-size: 0.875em;
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    border-radius: 3px;
+    padding: 0.05rem 0.3rem;
+  }
+
+  .note {
+    border-left: 2px solid var(--line);
+    padding: 0.15rem 0 0.15rem 1rem;
+    margin: 0 0 0.85rem;
+    font-size: 0.9375rem;
+    color: var(--muted);
+  }
+  .note.warn { border-left-color: var(--pending); }
+
+  /* ------------------------------------------------------------------ tabla */
+  .table-scroll { overflow-x: auto; margin-bottom: 0.85rem; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
+  th, td {
+    text-align: left;
+    padding: 0.6rem 1rem 0.6rem 0;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+  }
+  th {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom-color: var(--line);
+  }
+  td:first-child { color: var(--ink); white-space: nowrap; padding-right: 1.5rem; }
+  td { color: var(--muted); }
+
+  footer {
+    border-top: 1px solid var(--line-soft);
+    padding-top: 1.5rem;
+    font-size: 0.8125rem;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  @media (max-width: 34rem) {
+    .step { grid-template-columns: 1.75rem 1fr; gap: 0 0.75rem; }
+    .wrap { padding-top: 2.5rem; gap: 2.5rem; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Guía de traspaso</div>
+    <h1>ThinkThings en tu Mac</h1>
+    <p class="lede">
+      Montar el CMS de leads en una máquina nueva, de cero a dashboard funcionando.
+      Los pasos van en orden: cada uno da por hecho el anterior.
+    </p>
+    <div class="meta">
+      <span>Tiempo estimado: 40 min</span>
+      <span>macOS · Apple Silicon</span>
+      <span>Actualizado 20/08/2026</span>
+    </div>
+  </header>
+
+  <div class="note">
+    Haz clic en el número de cada paso para tacharlo. Se guarda en este navegador,
+    así que puedes cerrar y seguir mañana.
+  </div>
+
+  <section class="steps">
+
+    <article class="step" data-step="1">
+      <div class="num" tabindex="0" role="checkbox" aria-checked="false" aria-label="Marcar paso 1">01</div>
+      <h2>Herramientas del sistema</h2>
+      <p>
+        Cuatro cosas, y ninguna es opcional. Si ya tienes Homebrew, empieza por la
+        segunda línea.
+      </p>
+      <div class="cmd"><span class="c"># Homebrew, si no lo tienes</span>
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+brew install python@3.12 node poppler git</div>
+      <p>
+        <code>poppler</code> trae <code>pdftoppm</code> y <code>pdfinfo</code>, que
+        son los que convierten los PDF en imágenes. Node tiene que ser 22 o
+        superior: compruébalo con <code>node -v</code>.
+      </p>
+    </article>
+
+    <article class="step" data-step="2">
+      <div class="num" tabindex="0" role="checkbox" aria-checked="false" aria-label="Marcar paso 2">02</div>
+      <h2>Clonar el proyecto</h2>
+      <div class="cmd">git clone https://github.com/soymachine/reports-cms.git
+cd reports-cms</div>
+      <p>
+        Elige una carpeta donde no te moleste: el proyecto crecerá con los PDF
+        descargados y las imágenes generadas, y llega a ocupar varios gigas.
+      </p>
+    </article>
+
+    <article class="step" data-step="3">
+      <div class="num" tabindex="0" role="checkbox" aria-checked="false" aria-label="Marcar paso 3">03</div>
+      <h2>Instalar dependencias <span class="chip pending">pendiente · fase 6</span></h2>
+      <p>
+        Cuando exista <code>setup.command</code>, esto será un doble clic desde el
+        Finder. Mientras tanto, a mano:
+      </p>
+      <div class="cmd"><span class="c"># entorno de Python</span>
+/opt/homebrew/bin/python3.12 -m venv .venv
+.venv/bin/pip install openpyxl
+
+<span class="c"># dependencias del dashboard</span>
+npm --prefix dashboard install</div>
+      <p>
+        Todos los scripts se ejecutan con <code>.venv/bin/python</code>, nunca con
+        el Python del sistema. El dashboard lo resuelve solo.
+      </p>
+    </article>
+
+    <article class="step" data-step="4">
+      <div class="num" tabindex="0" role="checkbox" aria-checked="false" aria-label="Marcar paso 4">04</div>
+      <h2>Traer la base de datos <span class="chip pending">pendiente · fase 6</span></h2>
+      <p>
+        Ni <code>leads.db</code> ni los PDF viajan por git: son datos, no código.
+        Llegarán en un paquete aparte (<code>thinkthings-datos.tar.gz</code>) que se
+        descomprime en la raíz del proyecto.
+      </p>
+      <div class="cmd">./scripts/import_bundle.command ~/Downloads/thinkthings-datos.tar.gz</div>
+      <div class="note warn">
+        No copies <code>leads.db</code> a pelo con el dashboard abierto en la otra
+        máquina: SQLite en caliente puede dar un fichero corrupto que parece
+        correcto hasta que falla. El paquete se genera con el dashboard parado y
+        trae su suma de verificación.
+      </div>
+    </article>
+
+    <article class="step" data-step="5">
+      <div class="num" tabindex="0" role="checkbox" aria-checked="false" aria-label="Marcar paso 5">05</div>
+      <h2>Autorizar Magnific <span class="chip pending">pendiente · fase 1</span></h2>
+      <p>
+        Es lo único que necesita internet y una cuenta. Sin esto todo funciona
+        salvo generar rediseños.
+      </p>
+      <div class="cmd">.venv/bin/python scripts/magnific_login.py</div>
+      <p>
+        Se abre el navegador, autorizas y la sesión queda guardada en
+        <code>~/.thinkthings/magnific/</code>. Se renueva sola a partir de ahí.
+      </p>
+      <div class="note warn">
+        Haz tu propio login: no copies los ficheros de sesión de la otra máquina.
+        El token de refresco rota en cada renovación, así que dos máquinas
+        compartiendo sesión se echan la una a la otra.
+      </div>
+    </article>
+
+    <article class="step" data-step="6">
+      <div class="num" tabindex="0" role="checkbox" aria-checked="false" aria-label="Marcar paso 6">06</div>
+      <h2>Arrancar <span class="chip">listo</span></h2>
+      <p>Doble clic en <code>start.command</code> desde el Finder, o:</p>
+      <div class="cmd">./start.command</div>
+      <p>
+        Abre <code>localhost:4321</code> en el navegador cuando el servidor
+        responde. Para pararlo, <kbd>Ctrl</kbd>+<kbd>C</kbd> en esa ventana. Si el
+        puerto ya está ocupado, no arranca una segunda instancia: reutiliza la que
+        hay.
+      </p>
+    </article>
+
+    <article class="step" data-step="7">
+      <div class="num" tabindex="0" role="checkbox" aria-checked="false" aria-label="Marcar paso 7">07</div>
+      <h2>Comprobar que todo está en su sitio <span class="chip">listo</span></h2>
+      <div class="cmd">.venv/bin/python -m pytest tests -q
+npm --prefix dashboard run build
+bash tests/smoke_api.sh</div>
+      <p>
+        Lo primero prueba la lógica del pipeline, el control de calidad y el
+        cálculo de créditos. Lo segundo es la verificación que hay que pasar
+        siempre antes de dar por bueno un cambio en el dashboard. Lo tercero
+        necesita el servidor arrancado.
+      </p>
+    </article>
+
+    <article class="step" data-step="8">
+      <div class="num" tabindex="0" role="checkbox" aria-checked="false" aria-label="Marcar paso 8">08</div>
+      <h2>El cazador nocturno <span class="chip pending">pendiente · fase 4</span></h2>
+      <p>
+        Busca organizaciones nuevas cada noche y las mete como leads sin contactar.
+        Se instala una vez:
+      </p>
+      <div class="cmd">./scripts/install_hunter.command</div>
+      <p>
+        En tu máquina saltará a las 03:30 (en la otra a las 02:00, para que no
+        compitan). Se controla desde el dashboard, no desde la terminal:
+      </p>
+      <ul>
+        <li><span class="mono">Cazar ahora</span> — lo lanza al momento.</li>
+        <li><span class="mono">Detener</span> — aborta la ejecución en curso.</li>
+        <li><span class="mono">Cazador activo</span> — interruptor que decide si vuelve a saltar. Apagado, el programador sigue disparando pero el script sale de inmediato.</li>
+      </ul>
+      <p>
+        Los leads que trae entran con origen <code>agent</code> y estado
+        <span class="mono">Not contacted</span>: revísalos antes de gastar créditos
+        en generar nada.
+      </p>
+    </article>
+
+  </section>
+
+  <section class="steps">
+    <article class="step">
+      <div class="num" aria-hidden="true">·</div>
+      <h2>Si algo falla</h2>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Síntoma</th><th>Qué pasa</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>El dashboard sale en negro</td>
+              <td>Alguien movió las variables CSS dentro de <code>@layer base</code> en <code>global.css</code>. Tienen que estar en la raíz.</td>
+            </tr>
+            <tr>
+              <td>«Magnific requiere login»</td>
+              <td>La sesión caducó sin poder renovarse. Repite el paso 05.</td>
+            </tr>
+            <tr>
+              <td><code>pdftoppm: command not found</code></td>
+              <td>Falta poppler: <code>brew install poppler</code>.</td>
+            </tr>
+            <tr>
+              <td>Los PDF no se descargan</td>
+              <td>El buscador usa DuckDuckGo Lite y es sensible a cambios de HTML. Prueba otro lead antes de dar por rota la máquina.</td>
+            </tr>
+            <tr>
+              <td>Una generación se queda colgada</td>
+              <td>La cola registra el pid y permite cancelar desde el panel; los trabajos huérfanos se cierran solos al reiniciar el dashboard.</td>
+            </tr>
+            <tr>
+              <td>Leads duplicados</td>
+              <td>Normal si el cazador corre en las dos máquinas. <code>.venv/bin/python scripts/dedupe.py</code> los agrupa.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </section>
+
+  <footer>
+    <span>Los pasos marcados como pendientes dependen de la migración que quita Hermes del proyecto — ver <code>migracion-sin-hermes.md</code>.</span>
+    <span>Reglas del proyecto y detalle de cada script: <code>Instructions.md</code> y <code>README.md</code>.</span>
+  </footer>
+
+</div>
+
+<script>
+  // El progreso vive en este navegador: la guía se lee a lo largo de varios ratos.
+  const KEY = 'thinkthings-traspaso';
+  const done = new Set(JSON.parse(localStorage.getItem(KEY) || '[]'));
+
+  document.querySelectorAll('.step[data-step]').forEach((step) => {
+    const id = step.dataset.step;
+    const box = step.querySelector('.num');
+
+    const paint = () => {
+      const on = done.has(id);
+      step.classList.toggle('done', on);
+      box.setAttribute('aria-checked', String(on));
+    };
+
+    const toggle = () => {
+      done.has(id) ? done.delete(id) : done.add(id);
+      localStorage.setItem(KEY, JSON.stringify([...done]));
+      paint();
+    };
+
+    box.addEventListener('click', toggle);
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    });
+    paint();
+  });
+</script>
