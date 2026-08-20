@@ -58,34 +58,38 @@ crítico. Claude Code queda para lo que es agéntico de verdad: el cazador.
 
 ## 3. Fases
 
-### Fase 0 — Verificación previa (30 min, bloquea todo lo demás)
+### Fase 0 — Verificación previa (5 min, bloquea todo lo demás)
 
 Antes de escribir el login hay que confirmar que el MCP de Magnific permite
-registro dinámico de clientes. Desde esta máquina, con la sesión actual:
+registro dinámico de clientes. **Ya está automatizado** en
+`scripts/fase0_check.py`: sondeo de solo lectura, sin dependencias, que no gasta
+créditos y no imprime ningún token.
 
 ```bash
-curl -s https://mcp.magnific.com/.well-known/oauth-protected-resource | jq .
-curl -s https://mcp.magnific.com/.well-known/oauth-authorization-server | jq .
-cat ~/.hermes/mcp-tokens/magnific.meta.json      # qué descubrió Hermes
-cat ~/.hermes/mcp-tokens/magnific.client.json    # client_id y si hubo DCR
+python3 scripts/fase0_check.py
 ```
 
-Tres desenlaces:
+Mira tres cosas: si el MCP anuncia sus metadatos OAuth, si el servidor de
+autorización declara `registration_endpoint`, y qué dejó escrito Hermes en
+`~/.hermes/mcp-tokens/`. Termina con uno de estos veredictos:
 
-- **Hay `registration_endpoint`** → camino limpio: nos registramos como cliente
-  propio ("thinkthings-cms") y quedamos independientes.
-- **No lo hay, pero el `client_id` de Hermes es público** (los clientes OAuth
-  públicos con PKCE no llevan secreto) → reutilizamos ese `client_id` en el flujo
-  de código de autorización. Bootstrap heredado de Hermes por una vez, pero **cero
-  dependencia en ejecución**: no hace falta que Hermes esté instalado.
-- **Ni una cosa ni la otra** → única vía: copiar los tres ficheros de
-  `~/.hermes/mcp-tokens/` a la máquina del hermano y renovar cuando caduque el
-  refresh token. Es el escenario malo; entonces la recomendación es dejar Hermes
-  instalado *solo* para el login y quitarlo de todo lo demás (fases 2-6 siguen
-  siendo válidas).
+- **Escenario A — hay `registration_endpoint`** → camino limpio: nos registramos
+  como cliente propio ("thinkthings-cms") y quedamos independientes.
+- **Escenario B — no lo hay, pero el `client_id` de Hermes es público** (los
+  clientes OAuth públicos con PKCE no llevan secreto) → reutilizamos ese
+  `client_id`. Bootstrap heredado de Hermes por una vez, pero **cero dependencia
+  en ejecución**: no hace falta que Hermes esté instalado.
+- **Escenario C — ni una cosa ni la otra** → no hay login sin Hermes. Recomendación
+  entonces: dejarlo instalado *solo* para el login y quitarlo de todo lo demás
+  (fases 2-6 siguen siendo válidas). Antes de rendirse, mirar si Magnific ofrece
+  API key en su panel web.
 
-> No he podido comprobarlo desde este entorno remoto: el proxy bloquea el dominio
-> de Magnific. Es el primer paso a ejecutar en local.
+Un cuarto desenlace, `SIN VEREDICTO`, significa que la máquina no llegó al
+servidor: no dice nada sobre A/B/C. Repetir con conexión directa.
+
+> Este sondeo **no puede correrse desde una sesión remota de Claude Code**: el
+> contenedor no tiene tu `~/.hermes/` y la política de red del entorno bloquea el
+> dominio de Magnific. Es un paso de tu máquina.
 
 ### Fase 1 — `scripts/magnific_login.py` (núcleo del trabajo)
 
@@ -145,42 +149,68 @@ devuelve `{ok, status, balance}` distinguiendo `connected` / `auth_required` /
 `error` por **excepción tipada** (`MagnificAuthError`), no por buscar `✓` y `OAuth`
 en un texto. Se mantiene la caché de 60 s.
 
-### Fase 4 — El cazador nocturno
+### Fase 4 — El cazador nocturno (determinista)
 
-Dos piezas nuevas, ambas versionadas:
+**Decisión tomada: sin agente.** El cazador pasa a ser `scripts/hunt.py`, Python
+puro, sin LLM. Ventajas e inconvenientes comparados más abajo (§5).
 
-1. **`agents/lead-hunter.md`** — el prompt del cazador, hoy perdido dentro de
-   Hermes. Hay que reconstruirlo (buscar hasta 5 organizaciones nuevas con
-   DuckDuckGo Lite, dedupe por nombre normalizado, insertar con `source=agent`
-   vía `lead_mgr.py`). `lead_mgr.py` ya está diseñado como CLI para agentes y
-   devuelve JSON: sirve tal cual, solo cambia quién lo llama.
-2. **`scripts/hunt.command`** — envoltorio que ejecuta:
+Piezas:
 
-   ```bash
-   claude --bare -p "$(cat agents/lead-hunter.md)" \
-     --allowedTools "Bash(.venv/bin/python lead_mgr.py *),Bash(curl *),Read" \
-     --output-format json >> logs/hunt-$(date +%F).json
-   ```
-
-   `--bare` es lo recomendado para scripts: arranca sin cargar hooks, plugins ni
-   `CLAUDE.md` del entorno, así el resultado es el mismo en las dos máquinas. Ojo:
-   en modo `--bare` Claude Code no usa el login de suscripción, necesita
-   `ANTHROPIC_API_KEY`. Si se prefiere usar la suscripción, se quita `--bare` y se
-   acepta que el entorno local influye. `--allowedTools` acota lo que puede tocar;
-   sin permisos abiertos y sin `--permission-mode` amplio.
-
-   Alternativa a considerar: hoy `pdf_finder.py` ya hace búsqueda + descarga sin
-   LLM. Si al reconstruir el prompt se ve que el cazador solo hacía búsquedas
-   mecánicas, sale más barato y más fiable un `scripts/hunt.py` determinista sin
-   agente. Decidirlo al escribir el prompt, no antes.
-
-3. **Programación**: `com.thinkthings.leadhunter.plist` en el repo +
+1. **`scripts/hunt.py`** — busca organizaciones candidatas en DuckDuckGo Lite con
+   las mismas consultas que ya usa `pdf_finder.py` (que hoy hace búsqueda +
+   descarga + control de calidad sin ningún LLM: la mitad del trabajo ya está
+   escrita y probada), normaliza el nombre, descarta las que ya existen y las
+   inserta con `source=agent` reutilizando las funciones de `lead_mgr.py`. Tope
+   por ejecución: `settings.json → hunter.max_new_leads` (5).
+   El scoring de prioridad ya existe en `scripts/score_leads.py`.
+2. **Interruptor y parada** (ver §"El botón de parar" abajo).
+3. **Programación con `launchd`**: `com.thinkthings.leadhunter.plist` versionado +
    `scripts/install_hunter.command` que lo copia a `~/Library/LaunchAgents` y hace
-   `launchctl load`. En macOS `launchd` es más fiable que `crontab` (arranca aunque
-   la máquina estuviera dormida a las 02:00, con `StartCalendarInterval`).
-4. **`hunt-now.ts`**: `spawn('hermes', ['cron','run', jobId])` →
-   `spawn('scripts/hunt.command')`, y fuera `settings.json → cron.lead_hunter_job_id`
-   (queda `cron.schedule` como documentación del horario).
+   `launchctl load`. En macOS `launchd` es más fiable que `crontab`:
+   `StartCalendarInterval` recupera la ejecución si la máquina estaba dormida a
+   las 02:00.
+4. **`hunt-now.ts`**: `spawn('hermes', ['cron','run', jobId])` → `spawn(python,
+   ['scripts/hunt.py'])`, resolviendo el intérprete desde `PROJECT_ROOT` como ya
+   hacen `credits.ts` y compañía. Fuera `settings.json → cron.lead_hunter_job_id`.
+
+#### El botón de parar
+
+Buena intuición, y esconde **dos cosas distintas** que conviene no mezclar:
+
+| Quiero… | Qué hace falta | Control en la interfaz |
+|---|---|---|
+| Abortar la ejecución que está corriendo ahora | matar el proceso por su pid | Botón **Detener** (solo visible mientras corre) |
+| Que no vuelva a saltar esta noche | una bandera que el script mire al arrancar | Interruptor **Cazador activo** |
+
+El segundo es el importante y el que casi siempre falta. La forma robusta **no**
+es descargar el job de `launchd` (necesita permisos, falla en silencio y luego
+nadie recuerda cómo volver a cargarlo), sino la inversa: `launchd` sigue
+disparando cada noche, y lo primero que hace `hunt.py` es leer
+`settings.json → hunter.enabled`; si está en `false`, escribe una línea en el log
+y sale con código 0. Pausar y reanudar es entonces un `PATCH` a un fichero, sin
+tocar el sistema, y funciona igual en las dos máquinas.
+
+La cola de trabajos (`dashboard/src/lib/queue.ts`) ya resuelve el primer caso para
+las generaciones: registra el pid, permite cancelar y cierra los huérfanos al
+arrancar. El cazador debe entrar por ahí en vez de inventarse su propio mecanismo.
+
+Endpoints: `POST /api/hunt-now` (lanzar), `POST /api/hunt-stop` (matar el pid en
+curso), `POST /api/hunt-toggle` (bandera `enabled`), `GET /api/hunt-status`
+(corriendo / última ejecución / leads insertados / activo o pausado).
+
+#### Las dos máquinas
+
+Programado en ambas, como pediste, con dos salvaguardas:
+
+- **Horarios escalonados** (02:00 aquí, 03:30 allí) para que no compitan por los
+  mismos resultados de búsqueda en el mismo minuto.
+- El dedupe por nombre normalizado ya existe (`scripts/dedupe.py`), pero está
+  pensado para limpiar *después*. `hunt.py` debe comprobar `lead_mgr exists`
+  **antes** de insertar, que es más barato que arreglarlo luego.
+
+Como es determinista, "gasto doble" aquí solo significa ancho de banda y algún
+lead repetido: sin agente no hay coste por token. Esa es, de hecho, la razón más
+práctica para elegir determinista mientras estáis en desarrollo.
 
 ### Fase 5 — Borrar el motor `agent`
 
@@ -198,10 +228,16 @@ Lo que hoy impide clonar y arrancar, más allá de Hermes:
 - `/Users/danimoyalya2/.local/bin/hermes` — desaparece en la fase 3.
 - `.venv` con Python 3.12 y `/opt/homebrew/bin/python3.12` documentado a pelo.
 - `poppler` (`pdftoppm`, `pdfinfo`) y Node 22+.
-- `leads.db` y `pdfs/` no están en git (correcto): hay que decidir si el hermano
-  parte de cero (`import_excel.py`) o se le pasa una copia de la base.
+- `leads.db` y `pdfs/` no están en git (correcto) y se le pasan copiados. Hace
+  falta `scripts/export_bundle.command`: cierra la base con `VACUUM INTO` (copiar
+  un SQLite en caliente puede dar un fichero corrupto), empaqueta `leads.db` +
+  `pdfs/` + `generated/` en un `.tar.gz` con su suma de verificación, y del otro
+  lado `scripts/import_bundle.command` lo descomprime y verifica. Los tokens de
+  Magnific **no** van en el paquete: cada máquina hace su propio login (ver §6).
 
-Entregable: **`setup.command`** que verifica Python 3.12, crea `.venv`, instala
+Entregables: **una guía HTML autocontenida** (`documentacion/traspaso.html`, un
+único fichero para abrir con doble clic, sin dependencias) con los pasos en orden
+para la máquina nueva; y **`setup.command`** que verifica Python 3.12, crea `.venv`, instala
 `openpyxl`, comprueba `pdftoppm` y `node`, hace `npm install` y termina lanzando
 `magnific_login.py`; más un `CLAUDE.md` con las reglas del proyecto (hoy están en
 `Instructions.md`, escrito para agentes de Hermes) para que Claude Code las cargue
@@ -214,18 +250,77 @@ Y actualizar `README.md` (líneas 90, 91, 99) e `Instructions.md` (38, 52, 53, 6
 
 | Fase | Qué desbloquea | Esfuerzo |
 |------|----------------|----------|
-| 0 Verificar OAuth | todo lo demás | 30 min |
+| 0 Verificar OAuth (`fase0_check.py`) | todo lo demás | 5 min |
 | 1 `magnific_login.py` | independencia real | medio día |
 | 3 Semáforo | dashboard portable | 1 h |
 | 2 Catálogo | quita `hermes chat` | 1 h |
 | 5 Borrar `--engine agent` | último `hermes chat` | 30 min |
-| 4 Cazador + launchd | el cron | medio día (más si el prompt hay que reinventarlo) |
-| 6 `setup.command` + docs | la máquina del hermano | 2-3 h |
+| 4 Cazador + launchd + botón de parada | el cron | 1 día |
+| 6 Paquete de traspaso + guía HTML + `setup.command` | la máquina del hermano | medio día |
 
 Fases 1, 2, 3 y 5 son independientes entre sí salvo por el orden lógico; la 4 es
 la única con incertidumbre alta, porque el prompt original no está en el repo.
 
-## 5. Riesgos
+## 5. Cazador: agéntico vs determinista
+
+Pediste el porqué de la elección, así que aquí está el balance completo.
+
+### Agéntico (`claude -p`)
+
+**A favor**
+- Juicio: distingue "asociación europea de energía renovable" de "consultora que
+  vende informes", que es precisamente lo que un `grep` no sabe hacer.
+- Se adapta solo cuando DuckDuckGo cambia el HTML o cuando una web reorganiza su
+  sección de publicaciones. Hoy el buscador es "frágil ante cambios de HTML"
+  (`Instructions.md`, problemas conocidos); un agente absorbe ese cambio sin que
+  nadie toque código.
+- Enriquece: puede rellenar sector, país y una `rationale` en prosa leyendo la
+  web de la organización. Un script solo copia lo que encuentra literal.
+- Cambiar el criterio de caza es editar un párrafo, no reescribir funciones.
+
+**En contra**
+- Cuesta dinero por ejecución, y el coste es variable e imprevisible.
+- No es reproducible: dos noches iguales pueden dar resultados distintos, así que
+  cuando inserta basura no siempre sabes por qué.
+- No se puede testear de verdad. `tests/test_pipeline.py` no puede cubrirlo.
+- Necesita permisos de shell para ser útil, y eso es superficie de riesgo en algo
+  que corre solo a las 02:00 sin nadie mirando.
+- Ata el proyecto a un CLI externo — exactamente el problema del que salimos con
+  Hermes. Cambiaríamos una dependencia por otra.
+- Falla de formas raras: prosa en vez de JSON, timeouts, cuota agotada.
+
+### Determinista (`scripts/hunt.py`)
+
+**A favor**
+- Coste cero por ejecución y comportamiento idéntico en las dos máquinas.
+- Testeable y depurable: un fallo se reproduce y se arregla.
+- Sin permisos, sin claves de API, sin CLI externo. Funciona con el `.venv` y ya.
+- Reaprovecha lo que ya existe y está probado: `pdf_finder.py` (búsqueda +
+  calidad), `lead_mgr.py` (inserción), `dedupe.py`, `score_leads.py`.
+- Que corra en dos máquinas a la vez no duplica ningún gasto.
+
+**En contra**
+- No tiene criterio: mete lo que encaje con el patrón, y habrá que podar a mano.
+  Mitigación: insertar como `Not contacted` con `source=agent` y revisar en el
+  tablero antes de gastar créditos en ninguno.
+- Se rompe cuando cambia el HTML de DuckDuckGo, y hay que arreglarlo a mano.
+- Ampliar el criterio de búsqueda es escribir código, no un párrafo.
+
+### Por qué determinista aquí
+
+Coincido con tu elección, y la razón de fondo es que **el cazador no decide nada
+caro**: solo propone filas en una tabla que tú revisas antes de que cueste un
+céntimo. El juicio del LLM aportaría precisión en un sitio donde un falso positivo
+sale gratis y se borra con un clic. Ahí no compensa ni el coste ni la
+irreproducibilidad ni volver a atar el proyecto a un CLI externo.
+
+Y no es irreversible: si al vivir con él ves que la mitad de lo que trae es ruido,
+`hunt.py` puede ganar un `--engine agent` de una sola llamada — pasar la lista de
+candidatos a `claude -p` para que filtre y explique, dejando la búsqueda y la
+inserción donde están. Lo agéntico entraría entonces como *criba*, que es barato y
+acotado, y no como *conductor* de todo el proceso, que es donde duele.
+
+## 6. Riesgos
 
 1. **Magnific sin registro dinámico** (fase 0). Es el único riesgo que puede
    tumbar el plan; mitigación en la fase 0.
@@ -233,18 +328,18 @@ la única con incertidumbre alta, porque el prompt original no está en el repo.
    renovación (`magnific_client.py:135`): si las dos máquinas comparten copia del
    mismo token, la segunda se queda fuera al renovar la primera. Lo correcto es un
    login por máquina, no copiar el fichero.
-3. **`claude -p` no es gratis.** El cazador nocturno pasa a consumir cuota o API
-   key en la máquina de quien lo tenga programado. Conviene fijar un tope y
-   registrar el coste, que `--output-format json` ya reporta en `total_cost_usd`.
-4. **El cazador reconstruido no será idéntico al original.** Vale la pena
-   ejecutarlo unas noches en paralelo comparando lo que inserta antes de fiarse.
+3. **Copiar la base en caliente corrompe SQLite.** El paquete de traspaso debe
+   usar `VACUUM INTO` con el dashboard parado, nunca un `cp` de `leads.db`.
+4. **El cazador reconstruido no será idéntico al original**, y sin agente traerá
+   más ruido. Ejecutarlo unas noches en modo informe (`--dry-run`, que enseñe lo
+   que insertaría sin insertarlo) antes de dejarlo suelto.
+5. **`claude -p` ya no es riesgo**, al haber elegido determinista: el proyecto
+   deja de depender de cualquier CLI de agente, tanto Hermes como Claude Code.
 
-## 6. Decisiones que necesito de ti
+## 7. Decisiones tomadas (20/08/2026)
 
-- ¿El cazador debe seguir siendo agéntico (`claude -p`) o lo hacemos determinista
-  en Python? Lo sabremos mejor al reconstruir el prompt, pero tienes preferencia.
-- ¿La máquina de tu hermano parte de una base de datos vacía o le pasamos copia de
-  `leads.db` y `pdfs/`?
-- ¿Programamos el cazador en las dos máquinas o solo en una? (Dos máquinas
-  cazando a la vez duplican leads; el dedupe es por nombre normalizado, aguanta,
-  pero es gasto doble.)
+1. **Cazador determinista**, no agéntico. Comparativa en §5.
+2. **Se copia `leads.db` y `pdfs/`** a la máquina nueva, con paquete verificado.
+   Guía HTML de traspaso como entregable de la fase 6.
+3. **Cazador programado en las dos máquinas**, con horarios escalonados, y con
+   interruptor de pausa e botón de parada en el dashboard (fase 4).
