@@ -171,7 +171,7 @@ Tabla auxiliar: `cron_history` (job, ran_at, summary).
 | GET | `/api/generate-status` | Polling del estado de generación |
 | POST | `/api/email-draft` | Genera HTML de cold-email con pares antes/después |
 | POST | `/api/hunt-now` | Lanza el cron job manualmente |
-| GET | `/api/magnific-status` | Estado del MCP Magnific (cache 60 s) |
+| GET | `/api/magnific-status` | Estado del MCP Magnific vía `scripts/magnific_status.py` (cache 60 s) |
 | GET | `/api/file?path=...` | Sirve archivos de `pdfs/` y `generated/` con protección anti-traversal |
 | GET | `/api/export?q=...` | CSV de leads filtrados |
 

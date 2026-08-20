@@ -1,25 +1,32 @@
 #!/usr/bin/env python3
 """refresh_magnific_models.py — rebuild magnific_models.json from the Magnific MCP.
 
-Two read-only MCP tools do the work, both through a Hermes agent because that is
-the only client wired to the magnific OAuth session:
+Two read-only MCP tools do the work, called straight through magnific_client:
 
   * images_models_list — the model catalog (slugs, resolutions, qualities)
   * simulate_cost      — the credit price of one images_generate call
 
-Neither generates an image, so running this costs nothing. It is slow (minutes),
-which is exactly why the dashboard reads the cached file instead of asking live.
+Neither generates an image, so running this costs nothing. It used to go through
+an LLM agent that was *asked* to make those calls and answer with JSON, and the
+catalog was then fished out of its prose. Same reason the redesign stopped doing
+that: a price list is not a judgement call, and a number scraped out of a
+sentence is a number nobody can check.
 
 Usage:
   python3 scripts/refresh_magnific_models.py [--models gpt-2,seedream-5-pro] [--dry-run]
 """
+from __future__ import annotations
+
 import argparse
 import datetime
 import json
-import re
-import subprocess
 import sys
 from pathlib import Path
+from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from magnific_client import Magnific, MagnificError   # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CATALOG = ROOT / "magnific_models.json"
@@ -35,50 +42,127 @@ DEFAULT_MODELS = [
     "imagen-nano-banana-2-lite",
 ]
 
-ASK = """Usa el MCP magnific. NO generes ninguna imagen.
-
-1. Llama a images_models_list.
-2. Para cada modelo de esta lista: {models}
-   y para CADA una de sus resoluciones soportadas (y sin resolución si no soporta
-   ninguna), llama a simulate_cost con tool="images_generate" y arguments =
-   {{"prompt":"editorial report page redesign","count":1,"aspectRatio":"3:4",
-   "mode":<slug>,"resolution":<res>}}. simulate_cost es de solo lectura y no cobra.
-
-Devuelve SOLO un bloque JSON con esta forma exacta:
-{{"models":[{{"slug":"...","name":"...","resolutions":[...],"qualities":[...],
-"supportsReferences":true,"summary":"...","prices":[{{"resolution":"2k","quality":null,
-"credits":75}}]}}]}}
-Si una combinación falla, inclúyela con "credits":null."""
+# What one page of a redesign asks for. The price depends on the shape of the
+# request, so the simulation has to match what generate_redesign.py really sends.
+SAMPLE = {"prompt": "editorial report page redesign", "count": 1, "aspectRatio": "3:4"}
 
 
-def ask_agent(models: list[str]) -> dict:
-    prompt = ASK.format(models=", ".join(models))
-    res = subprocess.run(["hermes", "chat", "-q", prompt],
-                         capture_output=True, text=True, timeout=1800, cwd=str(ROOT))
-    out = (res.stdout or "") + "\n" + (res.stderr or "")
-    (ROOT / ".magnific_models_last_output.log").write_text(out[-20000:])
-    # the agent wraps the payload in prose and often in a ```json fence
-    blocks = re.findall(r"\{[\s\S]*\}", out)
-    for block in sorted(blocks, key=len, reverse=True):
-        try:
-            data = json.loads(block)
-        except Exception:
+def _first_list(payload: Any, keys: tuple[str, ...]) -> list:
+    """Find a list under any of `keys`, wherever the payload happens to nest it."""
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict):
+        for key in keys:
+            value = payload.get(key)
+            if isinstance(value, list):
+                return value
+        for value in payload.values():
+            found = _first_list(value, keys)
+            if found:
+                return found
+    return []
+
+
+def catalog(m: Magnific) -> list[dict]:
+    """The models the server offers, normalised to the shape the dashboard reads."""
+    raw = m.call("images_models_list", timeout=120)
+    models = _first_list(raw, ("models", "items", "data"))
+    if not models:
+        raise MagnificError(f"images_models_list no devolvió modelos: {str(raw)[:300]}")
+
+    out = []
+    for entry in models:
+        if not isinstance(entry, dict):
             continue
-        if isinstance(data, dict) and isinstance(data.get("models"), list):
-            return data
-    raise SystemExit("no JSON catalog found in the agent output "
-                     "(see .magnific_models_last_output.log)")
+        slug = entry.get("slug") or entry.get("id") or entry.get("mode") or entry.get("name")
+        if not slug:
+            continue
+        out.append({
+            "slug": str(slug),
+            "name": entry.get("name") or entry.get("label") or str(slug),
+            "resolutions": [str(r) for r in _first_list(
+                entry.get("resolutions") or entry.get("supportedResolutions") or [], ())],
+            "qualities": [str(q) for q in _first_list(
+                entry.get("qualities") or entry.get("supportedQualities") or [], ())],
+            "supportsReferences": bool(entry.get("supportsReferences",
+                                                 entry.get("references", True))),
+            "summary": entry.get("summary") or entry.get("description") or "",
+        })
+    return out
+
+
+def price(m: Magnific, slug: str, resolution: str | None,
+          quality: str | None) -> float | None:
+    """Credits for one image with this combination, or None if it cannot be priced."""
+    args = dict(SAMPLE)
+    if slug and slug != "auto":
+        args["mode"] = slug
+    if resolution:
+        args["resolution"] = resolution
+    if quality:
+        args["quality"] = quality
+    try:
+        out = m.simulate_cost("images_generate", args)
+    except MagnificError as e:
+        print(f"    ! {slug} {resolution or '-'}/{quality or '-'}: {str(e)[:90]}",
+              file=sys.stderr)
+        return None
+
+    for key in ("credits", "cost", "creditsRequired", "totalCredits"):
+        value = out.get(key)
+        if isinstance(value, (int, float)):
+            return float(value)
+    for node in out.values():                    # a veces viene envuelto un nivel
+        if isinstance(node, dict):
+            for key in ("credits", "cost"):
+                if isinstance(node.get(key), (int, float)):
+                    return float(node[key])
+    return None
+
+
+def price_all(m: Magnific, model: dict) -> list[dict]:
+    """One row per combination the model actually offers."""
+    resolutions = model["resolutions"] or [None]
+    qualities = model["qualities"] or [None]
+    rows = []
+    for resolution in resolutions:
+        for quality in qualities:
+            credits = price(m, model["slug"], resolution, quality)
+            rows.append({"resolution": resolution, "quality": quality, "credits": credits})
+    return rows
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--models", default=",".join(DEFAULT_MODELS),
-                    help="comma-separated slugs to include and price")
-    ap.add_argument("--dry-run", action="store_true", help="print the result, do not write")
+                    help="slugs a incluir y tarifar, separados por comas")
+    ap.add_argument("--all", action="store_true",
+                    help="tarifar todos los modelos que ofrezca el servidor")
+    ap.add_argument("--dry-run", action="store_true", help="imprime el resultado, no escribe")
     a = ap.parse_args()
 
-    models = [m.strip() for m in a.models.split(",") if m.strip()]
-    data = ask_agent(models)
+    wanted = [s.strip() for s in a.models.split(",") if s.strip()]
+
+    try:
+        with Magnific() as m:
+            available = catalog(m)
+            print(f"· {len(available)} modelos en el servidor")
+
+            by_slug = {model["slug"]: model for model in available}
+            chosen = available if a.all else [by_slug[s] for s in wanted if s in by_slug]
+            for missing in [s for s in wanted if s not in by_slug]:
+                # "auto" no siempre aparece en el listado, pero sí se puede tarifar
+                print(f"  ! {missing} no está en el catálogo del servidor", file=sys.stderr)
+                chosen.append({"slug": missing, "name": missing, "resolutions": [],
+                               "qualities": [], "supportsReferences": True, "summary": ""})
+
+            for model in chosen:
+                model["prices"] = price_all(m, model)
+                priced = sum(1 for p in model["prices"] if p["credits"] is not None)
+                print(f"  ✓ {model['slug']}: {priced}/{len(model['prices'])} combinaciones")
+    except MagnificError as e:
+        print(f"✗ {e}", file=sys.stderr)
+        return 1
 
     previous = {}
     if CATALOG.exists():
@@ -92,13 +176,14 @@ def main() -> int:
                     "scripts/refresh_magnific_models.py (solo lectura, no gasta créditos).",
         "updated_at": datetime.datetime.now().isoformat(timespec="seconds"),
         "source": "magnific MCP · images_models_list + simulate_cost",
-        "models": data["models"],
+        "models": chosen,
     }
     # keep whatever the previous file said about credits when the run could not price one
     old_prices = {m.get("slug"): m.get("prices") or [] for m in previous.get("models", [])}
-    for m in payload["models"]:
-        if not any(p.get("credits") for p in (m.get("prices") or [])) and old_prices.get(m.get("slug")):
-            m["prices"] = old_prices[m["slug"]]
+    for model in payload["models"]:
+        if not any(p.get("credits") for p in (model.get("prices") or [])) and \
+                old_prices.get(model.get("slug")):
+            model["prices"] = old_prices[model["slug"]]
 
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     if a.dry_run:

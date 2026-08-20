@@ -1,38 +1,53 @@
 import type { APIRoute } from 'astro';
 import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import { PROJECT_ROOT } from '../../lib/db';
 
 export const prerender = false;
 
-const HERMES = '/Users/danimoyalya2/.local/bin/hermes';
-
-// cache: hermes mcp test spawns a CLI + network call — don't hammer it
+// El script hace una llamada de red: una caché corta evita machacarla en cada
+// sondeo de la barra lateral (que pregunta cada 60 s).
 let cache: { at: number; payload: Record<string, unknown> } | null = null;
 const CACHE_MS = 60_000;
+
+/** El estado viene decidido por el script; aquí no se interpreta ningún texto. */
+function probe(): Record<string, unknown> {
+  const python = path.join(PROJECT_ROOT, '.venv', 'bin', 'python');
+  const script = path.join(PROJECT_ROOT, 'scripts', 'magnific_status.py');
+  try {
+    const out = execFileSync(python, [script], {
+      cwd: PROJECT_ROOT,
+      timeout: 30_000,
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    return JSON.parse(out.trim().split('\n').filter(Boolean).pop() ?? '{}');
+  } catch (err: any) {
+    // Salida distinta de cero: el script ya explicó por qué en su JSON de stdout.
+    const stdout = String(err?.stdout ?? '').trim();
+    const last = stdout.split('\n').filter(Boolean).pop();
+    if (last) {
+      try {
+        return JSON.parse(last);
+      } catch {
+        /* no era JSON: cae al genérico de abajo */
+      }
+    }
+    // Aquí ya no hablamos con Magnific, sino con el entorno: falta el .venv,
+    // falta el script, el proceso murió. Merece un mensaje distinto.
+    return {
+      ok: false,
+      status: 'error',
+      detail: String(err?.stderr || err?.message || err).slice(-300),
+    };
+  }
+}
 
 export const GET: APIRoute = async () => {
   if (cache && Date.now() - cache.at < CACHE_MS) {
     return Response.json(cache.payload);
   }
-  let payload: Record<string, unknown>;
-  try {
-    const out = execFileSync(HERMES, ['mcp', 'test', 'magnific'], {
-      timeout: 15_000,
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    const ok = out.includes('✓') && !out.includes('✗');
-    payload = out.includes('OAuth') || out.includes('authorization')
-      ? { ok, status: ok ? 'connected' : 'auth_required', detail: out.trim().slice(-300) }
-      : { ok, status: ok ? 'connected' : 'error', detail: out.trim().slice(-300) };
-  } catch (err: any) {
-    const out = String(err?.stdout ?? '') + String(err?.stderr ?? '');
-    const auth = out.includes('OAuth') || out.includes('authorization') || out.includes('login');
-    payload = {
-      ok: false,
-      status: auth ? 'auth_required' : 'error',
-      detail: (out.trim() || String(err?.message ?? err)).slice(-300),
-    };
-  }
+  const payload = probe();
   cache = { at: Date.now(), payload };
   return Response.json(payload);
 };
