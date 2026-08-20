@@ -1,0 +1,162 @@
+{
+  "_comment": "Catálogo de modelos Magnific para el rediseño. Regenerar con scripts/refresh_magnific_models.py (solo lectura, no gasta créditos). credits = coste por imagen según simulate_cost; null = desconocido, se usa fallback_credits.",
+  "updated_at": "2026-08-19",
+  "source": "magnific MCP · images_models_list + simulate_cost",
+  "fallback_credits": 75,
+  "models": [
+    {
+      "slug": "auto",
+      "name": "Auto (lo elige Magnific)",
+      "resolutions": [],
+      "qualities": [],
+      "supportsReferences": true,
+      "summary": "Magnific decide el modelo. Sin control de coste.",
+      "prices": [
+        {
+          "resolution": null,
+          "quality": null,
+          "credits": 100
+        }
+      ]
+    },
+    {
+      "slug": "gpt-2",
+      "name": "GPT 2",
+      "resolutions": [
+        "1k",
+        "2k",
+        "4k"
+      ],
+      "qualities": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "supportsReferences": true,
+      "summary": "El mejor para infografías, texto legible, diagramas y maquetación. Recomendado para páginas de informe.",
+      "prices": [
+        {
+          "resolution": "1k",
+          "quality": "medium",
+          "credits": 130
+        },
+        {
+          "resolution": "2k",
+          "quality": "medium",
+          "credits": 260
+        },
+        {
+          "resolution": "4k",
+          "quality": "medium",
+          "credits": 390
+        },
+        {
+          "resolution": "2k",
+          "quality": "low",
+          "credits": 30
+        },
+        {
+          "resolution": "2k",
+          "quality": "high",
+          "credits": 700
+        }
+      ]
+    },
+    {
+      "slug": "seedream-5-pro",
+      "name": "Seedream 5 Pro",
+      "resolutions": [
+        "1.5k",
+        "2k"
+      ],
+      "qualities": [],
+      "supportsReferences": true,
+      "summary": "Modelo por defecto de la plataforma. Muy bueno con referencias, más fotográfico que tipográfico.",
+      "prices": [
+        {
+          "resolution": "1.5k",
+          "quality": null,
+          "credits": 75
+        },
+        {
+          "resolution": "2k",
+          "quality": null,
+          "credits": 100
+        }
+      ]
+    },
+    {
+      "slug": "imagen-nano-banana-2-flash",
+      "name": "Google Nano Banana 2",
+      "resolutions": [
+        "1k",
+        "2k",
+        "4k"
+      ],
+      "qualities": [],
+      "supportsReferences": true,
+      "summary": "Equilibrio calidad/precio con resolución seleccionable.",
+      "prices": [
+        {
+          "resolution": "1k",
+          "quality": null,
+          "credits": 75
+        },
+        {
+          "resolution": "2k",
+          "quality": null,
+          "credits": 75
+        },
+        {
+          "resolution": "4k",
+          "quality": null,
+          "credits": 150
+        }
+      ]
+    },
+    {
+      "slug": "imagen-nano-banana-2",
+      "name": "Google Nano Banana Pro",
+      "resolutions": [
+        "1k",
+        "2k",
+        "4k"
+      ],
+      "qualities": [],
+      "supportsReferences": true,
+      "summary": "Máxima fidelidad a la referencia y a la marca. Para el entregable final.",
+      "prices": [
+        {
+          "resolution": "1k",
+          "quality": null,
+          "credits": 75
+        },
+        {
+          "resolution": "2k",
+          "quality": null,
+          "credits": 75
+        },
+        {
+          "resolution": "4k",
+          "quality": null,
+          "credits": 150
+        }
+      ]
+    },
+    {
+      "slug": "imagen-nano-banana-2-lite",
+      "name": "Google Nano Banana 2 Lite",
+      "resolutions": [],
+      "qualities": [],
+      "supportsReferences": true,
+      "summary": "Barato y rápido. Para borradores e iteración en volumen.",
+      "prices": [
+        {
+          "resolution": null,
+          "quality": null,
+          "credits": 60
+        }
+      ]
+    }
+  ]
+}

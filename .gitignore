@@ -1,0 +1,54 @@
+# ---- Dependencias ----------------------------------------------------------
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# ---- Build -----------------------------------------------------------------
+dashboard/dist/
+dashboard/.astro/
+.pytest_cache/
+
+# ---- Datos: la base de leads es contenido, no código -----------------------
+# Contiene empresas y contactos reales; además el -wal crece a decenas de MB.
+leads.db
+leads.db-shm
+leads.db-wal
+*.sqlite
+*.sqlite3
+
+# ---- Salidas generadas (218 MB de PNG de Magnific) -------------------------
+generated/
+
+# ---- PDFs descargados de terceros (94 MB, material con copyright ajeno) ----
+pdfs/
+
+# ---- Documentación pesada / datos comerciales ------------------------------
+# Los logos sí interesan; el resto son 38 MB de zips y la BD de prospects.
+documentacion/*.zip
+documentacion/Arxiu/
+documentacion/PNG/
+documentacion/*.xlsx
+
+# ---- Estado de ejecución y logs --------------------------------------------
+.generate_status.json
+.generate_last_output.log
+.pdfsearch_status.json
+*.log
+
+# ---- Secretos (por si acaso en el futuro) ----------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+mcp-tokens/
+
+# ---- macOS / editores ------------------------------------------------------
+.DS_Store
+.AppleDouble
+Thumbs.db
+.idea/
+.vscode/
+*.swp

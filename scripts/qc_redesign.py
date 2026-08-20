@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""qc_redesign.py — check that a redesign kept the original page's data.
+
+Magnific occasionally rewrites or invents figures. The original page has a
+real text layer in the source PDF (or falls back to OCR), the redesign is
+only an image, so it goes through OCR. We compare the *numbers*, which is
+what actually damages credibility when it changes.
+
+Usage:
+  python3 qc_redesign.py --original <img|pdf#page> --generated <img> [--pdf path --page N]
+Output: JSON {"ok": true, "verdict": "clean|warning|fail", "missing": [...], "kept": N}
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+
+try:
+    import pymupdf
+except ImportError:  # pragma: no cover
+    import fitz as pymupdf
+
+ROOT = Path(__file__).resolve().parent.parent
+
+# a "figure" worth protecting: 2030, 1.5, 45%, 12,500, €3.2bn …
+# grouped thousands first (12,500 / 12.500), otherwise a plain run of digits —
+# anchored on both sides so "2030" is one number, not "203" plus a stray "0"
+NUMBER = re.compile(
+    r"(?<![\w.,])(\d{1,3}(?:[.,]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)(?![\d])\s*(%|bn|bn€|m|k|tn|€|\$|mt|gw|twh|mwh)?",
+    re.I,
+)
+
+# noise that is never a claim about the business
+IGNORE = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "0"}
+
+
+def normalise(raw: str, unit: str | None) -> str:
+    txt = raw.replace(" ", "")
+    # 12,500 and 12.500 are the same figure written in two locales
+    if txt.count(",") and txt.count("."):
+        txt = txt.replace(",", "")
+    elif txt.count(","):
+        txt = txt.replace(",", "." if len(txt.split(",")[-1]) <= 2 else "")
+    try:
+        val = float(txt)
+    except ValueError:
+        return raw.lower()
+    out = f"{val:g}"
+    return out + (unit.lower() if unit else "")
+
+
+def numbers_in(text: str) -> set[str]:
+    found = set()
+    for m in NUMBER.finditer(text or ""):
+        raw, unit = m.group(1), m.group(2)
+        if raw in IGNORE and not unit:
+            continue
+        if len(raw.replace(".", "").replace(",", "")) < 2 and not unit:
+            continue  # single digits without a unit are page furniture
+        found.add(normalise(raw, unit))
+    return found
+
+
+def ocr_image(path: Path, lang: str = "eng") -> str:
+    import pytesseract
+    from PIL import Image
+
+    with Image.open(path) as im:
+        if im.mode not in ("RGB", "L"):
+            im = im.convert("RGB")
+        # upscale small renders: OCR is much better above ~1600px wide
+        if im.width < 1600:
+            ratio = 1600 / im.width
+            im = im.resize((1600, int(im.height * ratio)))
+        return pytesseract.image_to_string(im, lang=lang)
+
+
+def text_from_pdf_page(pdf: Path, page: int) -> str:
+    with pymupdf.open(pdf) as doc:
+        if page < 1 or page > doc.page_count:
+            return ""
+        return doc[page - 1].get_text("text") or ""
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--original", required=True, help="original page image (relative to project root)")
+    ap.add_argument("--generated", required=True, help="redesigned image (relative to project root)")
+    ap.add_argument("--pdf", default="", help="source PDF: its text layer beats OCR on the original")
+    ap.add_argument("--page", type=int, default=0)
+    ap.add_argument("--lang", default="eng")
+    a = ap.parse_args()
+
+    gen_path = ROOT / a.generated
+    if not gen_path.exists():
+        print(json.dumps({"ok": False, "error": "imagen generada no encontrada"}))
+        return 1
+
+    # original: prefer the real text layer, fall back to OCR of the render
+    original_text = ""
+    if a.pdf and a.page:
+        original_text = text_from_pdf_page(ROOT / a.pdf, a.page)
+    if len(original_text.strip()) < 40:
+        orig_path = ROOT / a.original
+        if orig_path.exists():
+            try:
+                original_text = ocr_image(orig_path, a.lang)
+            except Exception as e:
+                print(json.dumps({"ok": False, "error": f"OCR del original falló: {e}"}))
+                return 1
+
+    try:
+        generated_text = ocr_image(gen_path, a.lang)
+    except Exception as e:
+        print(json.dumps({"ok": False, "error": f"OCR del rediseño falló: {e}"}))
+        return 1
+
+    before = numbers_in(original_text)
+    after = numbers_in(generated_text)
+
+    missing = sorted(before - after)
+    invented = sorted(after - before)
+    kept = len(before & after)
+
+    coverage = kept / len(before) if before else 1.0
+    if not before:
+        verdict = "unknown"          # nothing measurable on the page
+    elif coverage >= 0.85:
+        verdict = "clean"
+    elif coverage >= 0.6:
+        verdict = "warning"
+    else:
+        verdict = "fail"
+
+    print(json.dumps({
+        "ok": True,
+        "verdict": verdict,
+        "coverage": round(coverage, 2),
+        "kept": kept,
+        "total_original": len(before),
+        "missing": missing[:25],
+        "invented": invented[:25],
+    }, ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,151 @@
+{
+  "project": "ThinkThings Reports Leads",
+  "cron": {
+    "lead_hunter_job_id": "d28024ce08c5",
+    "schedule": "0 2 * * *",
+    "description": "Búsqueda diaria de nuevos leads a las 02:00"
+  },
+  "pdf_finder": {
+    "max_pdfs_per_search": 3,
+    "min_pages": 8,
+    "crawl_site": true
+  },
+  "redesign": {
+    "max_pages": 4,
+    "model": "imagen-nano-banana-2-flash",
+    "resolution": "2k",
+    "quality": "",
+    "_model_comment": "Modelo Magnific por defecto para images_generate (mode/resolution/quality). Catálogo y coste por imagen en magnific_models.json. \"auto\" deja elegir a Magnific.",
+    "style_presets": [
+      {
+        "id": "editorial",
+        "name": "Editorial Premium",
+        "prompt": "editorial premium, tipografía serif moderna, mucho espacio en blanco, paleta sobria con un color de acento"
+      },
+      {
+        "id": "swiss",
+        "name": "Swiss / Internacional",
+        "prompt": "swiss design, grid estricto, helvética, rojo/negro/blanco, composición asimétrica"
+      },
+      {
+        "id": "dark-data",
+        "name": "Dark Data Viz",
+        "prompt": "fondo oscuro, visualización de datos luminosa, acentos neón sutiles, estilo dashboard premium"
+      },
+      {
+        "id": "brutalist",
+        "name": "Brutalist",
+        "prompt": "brutalism, tipografía enorme, bordes duros, alto contraste, sin sombras"
+      },
+      {
+        "id": "consultancy",
+        "name": "Consultoría Corporativa",
+        "prompt": "informe de consultora tier-1 tipo McKinsey/BCG, azul marino y gris, gráficos limpios con etiquetas claras, jerarquía de titulares con kicker, densidad de datos alta pero ordenada"
+      },
+      {
+        "id": "annual-report",
+        "name": "Memoria Anual",
+        "prompt": "memoria anual corporativa, portada con imagen a sangre, cifras destacadas a gran tamaño, retícula de dos columnas, papel crema, elegancia sobria"
+      },
+      {
+        "id": "infographic",
+        "name": "Infografía Visual",
+        "prompt": "estilo infográfico, iconografía lineal consistente, diagramas de flujo y mapas de datos, paleta de 3 colores, texto reducido a lo esencial"
+      },
+      {
+        "id": "scientific",
+        "name": "Científico / Académico",
+        "prompt": "rigor científico, tablas y gráficos precisos con notas al pie, tipografía serif de lectura larga, figuras numeradas, paleta neutra con acento frío"
+      },
+      {
+        "id": "magazine",
+        "name": "Revista / Feature",
+        "prompt": "maquetación de revista, titular tipográfico dramático, entradilla en capitular, columnas de texto con imágenes envolventes, mucho contraste de escala"
+      },
+      {
+        "id": "sustainability",
+        "name": "Sostenibilidad / ESG",
+        "prompt": "informe ESG, verdes naturales y tonos tierra, iconografía orgánica, fotografía de naturaleza integrada, indicadores de impacto destacados"
+      },
+      {
+        "id": "fintech",
+        "name": "Fintech / Financiero",
+        "prompt": "informe financiero moderno, tablas de datos nítidas, gráficos de series temporales, azul profundo y verde menta, tipografía sans geométrica, aire generoso"
+      },
+      {
+        "id": "tech-startup",
+        "name": "Tech / Producto",
+        "prompt": "estilo producto tecnológico, gradientes sutiles, tarjetas con bordes redondeados, tipografía sans moderna, capturas de interfaz integradas, aspecto de deck de startup"
+      },
+      {
+        "id": "minimal-mono",
+        "name": "Minimal Monocromo",
+        "prompt": "monocromo estricto, blanco y negro, tipografía de un solo peso variando escala, líneas finas como único ornamento, silencio visual"
+      },
+      {
+        "id": "govt-policy",
+        "name": "Institucional / Policy",
+        "prompt": "documento institucional de política pública, sobriedad formal, azul institucional, sumario ejecutivo destacado, cajas de recomendaciones, jerarquía numerada"
+      }
+    ]
+  },
+  "statuses": [
+    "Not contacted",
+    "PDF Found",
+    "Demo Ready",
+    "Contacted",
+    "Replied",
+    "Won",
+    "Lost",
+    "Discarded"
+  ],
+  "priorities": [
+    "A - Hot",
+    "B - Strong",
+    "C - Medium",
+    "D - Long list"
+  ],
+  "scoring": {
+    "target_sectors": [
+      "Energy",
+      "Finance",
+      "Transport",
+      "Health",
+      "Agriculture"
+    ],
+    "_comment": "Sectores con encaje comercial: suman 12 puntos al score. Edítalos a tu criterio."
+  },
+  "radar": {
+    "cycle_months": 12,
+    "window_months": 3,
+    "_comment": "Un lead entra en el radar cuando su último informe cumple cycle_months ± window_months."
+  },
+  "branding": {
+    "studio": "Think Things",
+    "logo": "dashboard/public/Logo_TT2024_negro_horitzontal.png",
+    "footer": "Think Things — estudio de diseño gráfico, Barcelona",
+    "contact": "hola@thinkthings.es · thinkthings.es",
+    "cover_title": "Antes / Después",
+    "footer_en": "Think Things — graphic design studio, Barcelona",
+    "cover_title_en": "Before / After",
+    "note_en": "The data is 100% yours — only the design has changed.",
+    "website": "thinkthings.es",
+    "tagline_a": "Los datos tienen valor.",
+    "tagline_b": "El impacto empieza por entenderlos.",
+    "tagline_a_en": "Data has value.",
+    "tagline_b_en": "Impact starts with understanding.",
+    "logo_white": "",
+    "font_regular": "",
+    "font_bold": "",
+    "_comment": "Identidad del PDF comparativo. logo_white: versión del logo para la banda turquesa (vacío = no se dibuja). font_regular/font_bold: rutas a .ttf/.otf/.ttc; vacío = Avenir del sistema y, si no está, Helvetica."
+  },
+  "budget": {
+    "credits_per_lead": 600,
+    "credits_per_day": 2000,
+    "_comment": "Topes de créditos Magnific. La generación pide confirmación al superarlos. El coste estimado sale de magnific_models.json (simulate_cost), no de una media fija."
+  },
+  "jobs": {
+    "max_concurrent": 2,
+    "_comment": "Trabajos largos (generación) simultáneos. Cada uno gasta créditos: súbelo con cuidado."
+  }
+}

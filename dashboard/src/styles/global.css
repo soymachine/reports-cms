@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS variables MUST live at root level, NOT inside @layer base (else whole page renders black) */
+:root {
+  --background: 250 250 250;
+  --foreground: 24 24 27;
+  --card: 255 255 255;
+  --muted: 82 82 91;
+  --border: 212 212 216;
+  --accent: 5 150 105; /* emerald-600 */
+}
+
+.dark {
+  --background: 10 10 11;
+  --foreground: 250 250 250;
+  --card: 24 24 27;
+  --muted: 212 212 216;
+  --border: 63 63 70;
+  --accent: 52 211 153; /* emerald-400 */
+}
+
+@layer base {
+  * {
+    border-color: rgb(var(--border));
+  }
+  body {
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+    font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer utilities {
+  .text-muted {
+    color: rgb(var(--muted));
+  }
+  .text-subtle {
+    color: rgb(var(--border));
+  }
+  .border-subtle {
+    border-color: rgb(var(--border));
+  }
+  .bg-surface {
+    background-color: rgb(var(--card));
+  }
+}
+
+/* subtle scrollbar for kanban / modal */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--border));
+  border-radius: 8px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+}
