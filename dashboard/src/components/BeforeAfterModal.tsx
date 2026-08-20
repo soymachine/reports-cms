@@ -5,10 +5,15 @@ import {
 } from 'lucide-react';
 import type { GeneratedItem, StylePreset } from '../lib/types';
 import { fileUrl } from '../lib/types';
+import { pickForPage } from '../lib/runs';
 
 interface Props {
   item: GeneratedItem;                 // the pair the user clicked
   all: GeneratedItem[];                // every redesign of this lead
+  /** el conjunto desde el que se abrió: el pase que se está mirando, o lo vigente */
+  scope?: GeneratedItem[];
+  /** «Pase 2» cuando se mira uno anterior; null cuando es lo vigente */
+  scopeLabel?: string | null;
   organisation: string;
   stylePresets: StylePreset[];
   generating: boolean;
@@ -23,8 +28,8 @@ interface Props {
 type Mode = 'pair' | 'grid' | 'slider';
 
 export default function BeforeAfterModal({
-  item, all, organisation, stylePresets, generating, onClose, onSelect, onHero,
-  onGenerateStyles, onRegenerate, leadId,
+  item, all, scope = [], scopeLabel = null, organisation, stylePresets, generating,
+  onClose, onSelect, onHero, onGenerateStyles, onRegenerate, leadId,
 }: Props) {
   const [mode, setMode] = useState<Mode>('pair');
   const [picker, setPicker] = useState(false);
@@ -65,10 +70,13 @@ export default function BeforeAfterModal({
     return lost;
   }, [versions]);
 
-  // pages of this report that have at least one redesign, for prev/next
+  // Las páginas por las que se puede pasar: las del conjunto abierto cuando lo
+  // hay —así un pase anterior se recorre entero— y si no, las del informe.
   const pages = useMemo(
-    () => Array.from(new Set(all.filter((g) => g.pdf === item.pdf).map((g) => g.page))).sort((a, b) => a - b),
-    [all, item.pdf]
+    () => Array.from(new Set(
+      (scope.length ? scope : all.filter((g) => g.pdf === item.pdf)).map((g) => g.page)
+    )).sort((a, b) => a - b),
+    [all, scope, item.pdf]
   );
   const pageIdx = pages.indexOf(item.page);
 
@@ -104,10 +112,8 @@ export default function BeforeAfterModal({
   const goPage = (dir: -1 | 1) => {
     const next = pages[pageIdx + dir];
     if (next == null) return;
-    // keep the same style when the target page has it
-    const sameStyle = all.find((g) => g.pdf === item.pdf && g.page === next && g.style === item.style);
-    const fallback = all.find((g) => g.pdf === item.pdf && g.page === next);
-    if (sameStyle || fallback) onSelect((sameStyle ?? fallback)!);
+    const target = pickForPage(scope, all, item.pdf, next, item.style);
+    if (target) onSelect(target);
   };
 
   useEffect(() => {
@@ -138,6 +144,14 @@ export default function BeforeAfterModal({
           <span className="text-[11px] uppercase tracking-widest text-zinc-400 truncate">
             {organisation} — página {item.page}
           </span>
+          {scopeLabel && (
+            <span
+              className="shrink-0 rounded border border-amber-500/60 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400"
+              title="Estás comparando un pase anterior; las flechas recorren ese pase"
+            >
+              {scopeLabel}
+            </span>
+          )}
           {pages.length > 1 && (
             <span className="inline-flex items-center gap-1">
               <button

@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  composeCurrent, composeRun, runKey, runLabel, runsOf,
+  composeCurrent, composeRun, pickForPage, runKey, runLabel, runsOf,
 } from '../dashboard/src/lib/runs.ts';
 import type { GeneratedItem } from '../dashboard/src/lib/types.ts';
 
@@ -155,4 +155,44 @@ test('la etiqueta del chip dice cuándo y cuántas páginas', () => {
   assert.match(label, /1 pág\./);
   assert.doesNotMatch(label, /págs\./);
   assert.match(runLabel(runsOf(dosPases, PDF, 'magazine')[0]), /4 págs\./);
+});
+
+
+// --- pasar de página dentro de la comparación grande ---
+
+test('pasar de página se queda en el pase que se está mirando', () => {
+  const pase = composeRun(dosPases, PDF, 'magazine', 'job:10').map((c) => c.item);
+  const target = pickForPage(pase, dosPases, PDF, 2, 'magazine')!;
+  assert.ok(target.created_at!.startsWith('2026-08-18'),
+    'saltar a la versión vigente rompería la comparación que se está haciendo');
+});
+
+test('sin pase abierto, se pasa a la versión vigente', () => {
+  const target = pickForPage([], dosPases, PDF, 2, 'magazine')!;
+  assert.ok(target.created_at!.startsWith('2026-08-20'));
+});
+
+test('nunca se cae en la versión más antigua por accidente', () => {
+  // `all.find(...)` devolvía la primera del array: la v1, ni la del pase ni la
+  // vigente. Con tres versiones el fallo es inconfundible.
+  const tres = [
+    entry(9, '2026-08-01T10:00:00', 1, { superseded: true }),
+    entry(9, '2026-08-02T10:00:00', 2, { superseded: true }),
+    entry(9, '2026-08-03T10:00:00', 3),
+  ];
+  const target = pickForPage([], tres, PDF, 9, 'magazine')!;
+  assert.equal(target.created_at, '2026-08-03T10:00:00');
+});
+
+test('si la página no tiene ese estilo, sirve cualquiera vigente', () => {
+  const otroEstilo = [
+    ...segundoPase,
+    entry(7, '2026-08-20T13:00:00', 21, { style: 'swiss', styleName: 'Swiss' }),
+  ];
+  const target = pickForPage([], otroEstilo, PDF, 7, 'magazine')!;
+  assert.equal(target.style, 'swiss');
+});
+
+test('una página sin ninguna imagen no devuelve nada', () => {
+  assert.equal(pickForPage([], dosPases, PDF, 99, 'magazine'), null);
 });

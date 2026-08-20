@@ -158,7 +158,7 @@ function PdfGallery({
   pdfTitle: string;
   leadId: number;
   generated: GeneratedItem[];
-  onPreview: (g: GeneratedItem) => void;
+  onPreview: (g: GeneratedItem, scope: GeneratedItem[], scopeLabel: string | null) => void;
   onHero: (g: GeneratedItem) => void;
   onReveal: (path: string) => void;
   /** when this report is the one the user came from, unfold it as if “Mostrar” had been pressed */
@@ -204,6 +204,8 @@ function PdfGallery({
   }, [runs, run]);
 
   const viewingOld = run !== 'current';
+  const currentRun = runs.find((r) => r.key === run);
+  const runTitle = currentRun ? `Pase ${runs.length - currentRun.ordinal + 1}` : null;
   const pairs = composed.map((c) => c.item);
   const inherited = new Set(composed.filter((c) => !c.fromRun).map((c) => c.item.generated_img));
 
@@ -576,11 +578,11 @@ function PdfGallery({
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => onPreview(g)} className="text-left cursor-zoom-in group/ba">
+                  <button onClick={() => onPreview(g, pairs, viewingOld ? runTitle : null)} className="text-left cursor-zoom-in group/ba">
                     <div className="text-[9px] uppercase tracking-widest text-zinc-500 mb-1">Antes</div>
                     <img src={fileUrl(g.original_img)} alt={`antes p${g.page}`} className="w-full rounded-md border border-zinc-200 dark:border-zinc-800 transition-all duration-200 group-hover/ba:scale-[1.01] group-hover/ba:shadow-md group-hover/ba:border-zinc-400 dark:group-hover/ba:border-zinc-600" />
                   </button>
-                  <button onClick={() => onPreview(g)} className="text-left cursor-zoom-in group/ba">
+                  <button onClick={() => onPreview(g, pairs, viewingOld ? runTitle : null)} className="text-left cursor-zoom-in group/ba">
                     <div className="text-[9px] uppercase tracking-widest text-emerald-500 mb-1">Después</div>
                     <img src={fileUrl(g.thumb || g.generated_img)} alt={`después p${g.page}`} loading="lazy" className="w-full rounded-md border border-emerald-500/30 transition-all duration-200 group-hover/ba:scale-[1.01] group-hover/ba:shadow-md group-hover/ba:border-emerald-500/70" />
                   </button>
@@ -646,6 +648,16 @@ export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses,
   const [selectedPages, setSelectedPages] = useState<number[]>([]);
   const [preview, setPreview] = useState<PageThumb | null>(null);
   const [pairPreview, setPairPreview] = useState<GeneratedItem | null>(null);
+  // Desde qué conjunto se abrió la comparación: al mirar un pase anterior, pasar
+  // de página dentro del modal tiene que quedarse en ese pase y no saltar a lo
+  // vigente, que es justo la comparación rápida que se quiere hacer.
+  const [pairScope, setPairScope] = useState<{ items: GeneratedItem[]; label: string | null }>(
+    { items: [], label: null });
+
+  const openPair = (g: GeneratedItem, scope: GeneratedItem[], label: string | null) => {
+    setPairScope({ items: scope, label });
+    setPairPreview(g);
+  };
   // Magnific model settings: they drive both the look and the credit bill
   const [catalog, setCatalog] = useState<MagnificModel[]>([]);
   const [fallbackCredits, setFallbackCredits] = useState(75);
@@ -1734,7 +1746,7 @@ export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses,
                         pdfTitle={decodeHtml(p.title) || p.file}
                         leadId={lead.id}
                         generated={lead.generated}
-                        onPreview={setPairPreview}
+                        onPreview={openPair}
                         onHero={setHero}
                         onReveal={revealPdf}
                         focus={focusPdf && focusPdf.pdf === p.slug ? { style: focusPdf.style, key: focusPdf.key } : null}
@@ -1900,6 +1912,8 @@ export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses,
         <BeforeAfterModal
           item={livePair}
           all={lead.generated}
+          scope={pairScope.items}
+          scopeLabel={pairScope.label}
           organisation={lead.organisation}
           stylePresets={stylePresets}
           generating={generating}

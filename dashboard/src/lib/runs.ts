@@ -116,6 +116,28 @@ export function composeCurrent(items: GeneratedItem[], pdf: string,
     .map((item) => ({ item, fromRun: true }));
 }
 
+/**
+ * Qué imagen enseñar al pasar a otra página desde la comparación grande.
+ *
+ * Manda el conjunto que se está mirando —el pase abierto—, porque es el que se
+ * está comparando. Si esa página no está en él, se busca en el informe entero
+ * respetando el estilo actual, y siempre la vigente: `all.find(...)` a secas
+ * devuelve la primera del array, que es la versión MÁS ANTIGUA.
+ */
+export function pickForPage(scope: GeneratedItem[], all: GeneratedItem[],
+                            pdf: string, page: number,
+                            style: string): GeneratedItem | null {
+  const inScope = scope.find((g) => g.page === page);
+  if (inScope) return inScope;
+
+  const here = all.filter((g) => g.pdf === pdf && g.page === page && g.generated_img);
+  const head = (list: GeneratedItem[]) =>
+    list.find((g) => !g.superseded) ?? list[list.length - 1] ?? null;
+
+  return head(here.filter((g) => g.style === style)) ?? head(here);
+}
+
+
 /** Etiqueta del chip: «Pase 2 · 20 ago 12:40 · 3 págs». */
 export function runLabel(run: Run): string {
   const when = run.at
