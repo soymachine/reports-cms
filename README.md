@@ -11,7 +11,7 @@ Dashboard local para captación de clientes de **Reports** (thinkthings.es).
 | Importador | `scripts/import_excel.py` | Excel → SQLite (idempotente) |
 | Buscador de PDFs | `scripts/pdf_finder.py <id> --max 3` | DuckDuckGo Lite → descarga PDFs de reports → `pdfs/{id}/` |
 | Render de páginas | `scripts/render_pages.py <id> --pdf <path>` | pdftoppm → thumbnails + full pages en `generated/{id}/pages/` |
-| Generador de rediseños | `scripts/generate_redesign.py <id> --pages 2,5 --pdf-slug X` | Llamada directa al MCP Magnific → `generated/{id}/redesigns/` (`--engine agent` vuelve al agente Hermes) |
+| Generador de rediseños | `scripts/generate_redesign.py <id> --pages 2,5 --pdf-slug X` | Llamada directa al MCP Magnific → `generated/{id}/redesigns/` |
 | Cliente Magnific | `scripts/magnific_client.py` | Cliente MCP propio: genera, sube referencias, consulta saldo y coste. Sin él ejecutar imprime el saldo |
 | Catálogo de modelos | `scripts/refresh_magnific_models.py` | Regenera `magnific_models.json` por llamada directa al MCP (`images_models_list` + `simulate_cost`, solo lectura) |
 | Miniaturas | `scripts/thumbs.py --backfill` | WebP de 720 px junto a cada rediseño, para que la galería no cargue PNGs de 6 MB |

@@ -6,8 +6,8 @@ marcan y se dejan como registro de decisiones.
 ## Hechas (19/08/2026)
 
 1. **Llamada directa a Magnific** — `scripts/magnific_client.py`, cliente MCP propio sobre
-   la sesión OAuth de Hermes. `generate_redesign.py --engine direct` (por defecto) genera
-   sin agente intermedio; `--engine agent` sigue disponible como respaldo.
+   la sesión de `scripts/magnific_login.py`. `generate_redesign.py` genera sin agente
+   intermedio; el motor `--engine agent` se eliminó al quitar Hermes del proyecto.
 2. **Cola de trabajos** — `dashboard/src/lib/queue.ts`: tope de concurrencia, cancelación,
    pid registrado y cierre de huérfanos al arrancar.
 3. **Créditos reales** — coste exacto de la API por imagen, saldo de la cuenta en la barra

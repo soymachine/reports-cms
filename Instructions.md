@@ -35,7 +35,7 @@ Flujo de trabajo:
 │   ├── import_excel.py       # Excel → SQLite
 │   ├── pdf_finder.py         # DuckDuckGo Lite → descarga PDFs
 │   ├── render_pages.py       # pdftoppm → thumbnails/full
-│   └── generate_redesign.py  # Agente Hermes + Magnific MCP
+│   └── generate_redesign.py  # Llamada directa al MCP Magnific
 ├── pdfs/{lead_id}/           # PDFs descargados
 ├── generated/{lead_id}/      # Páginas renderizadas + rediseños
 └── dashboard/                # Astro.js + React + Tailwind
@@ -209,10 +209,9 @@ Usa `pdftoppm -png -r {dpi}` para generar `full-N.png` (previsualización/origin
 
 ### `scripts/generate_redesign.py`
 
-Spawnea `hermes chat -q` con acceso al MCP Magnific. El agente recibe:
-- Las imágenes de página originales.
-- Un prompt de estilo.
-- Instrucciones para guardar en `generated/{lead_id}/redesigns/page-{NN}-{style}-redesign.png`.
+Llama al MCP Magnific directamente (`scripts/magnific_client.py`): una llamada por
+página, una imagen por llamada, y el coste en créditos sale de la respuesta de la
+API. Guarda en `generated/{lead_id}/redesigns/page-{NN}-{style}-redesign.png`.
 
 Registra el resultado en `leads.generated`. Lee `settings.json` para `max_pages`.
 

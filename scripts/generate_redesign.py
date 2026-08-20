@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """generate_redesign.py — redesign PDF pages as new aesthetic images via Magnific MCP.
 
-Spawns a Hermes agent (with the magnific MCP server) that takes each selected
+Calls the magnific MCP directly (see magnific_client.py) taking each selected
 page image and produces a redesigned, high-aesthetic version of it. Saves the
 results under generated/{lead_id}/redesigns/ and registers them in leads.generated.
 
@@ -15,7 +15,6 @@ import json
 import re
 import sqlite3
 import subprocess
-import time
 import sys
 from pathlib import Path
 
@@ -23,47 +22,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parent.parent
 DB = ROOT / "leads.db"
 STATUS_FILE = ROOT / ".generate_status.json"
-
-PROMPT_TEMPLATE = """Eres un director de arte senior de Think Things (estudio de diseño gráfico, Barcelona).
-
-TAREA: Rediseñar {n} página(s) de un informe PDF de "{org}" creando imágenes nuevas con un FUERTE componente estético, manteniendo la información/datos de cada página.
-
-Tienes acceso al MCP server "magnific". Las herramientas relevantes:
-- images_generate: genera imágenes o RE-HACE una existente usando referencias (imagen original + prompt). Es la herramienta principal.
-- images_upscale: upscale premium 2x-16x para nitidez del resultado final.
-- account_balance: comprueba créditos ANTES y DESPUÉS de generar.
-- creations_get / creations_wait: para obtener la URL/resultado de una creación.
-- creations_request_upload + creations_finalize_upload: para subir las imágenes locales si la herramienta lo requiere.
-Si una herramienta necesita la imagen como upload, usa el flujo request_upload → PUT → finalize_upload.
-
-Para CADA una de estas imágenes de página original:
-{pages_list}
-{base_note}
-HAZ ESTO por cada página:
-1. Analiza la página con visión (layout, datos, gráficos, jerarquía).
-2. Llama a images_generate con la imagen original como referencia y EXACTAMENTE este prompt,
-   sin reescribirlo ni resumirlo, añadiendo solo lo que describa el contenido concreto de esa página:
-
-<<<PROMPT_MAGNIFIC
-{magnific_prompt}
-PROMPT_MAGNIFIC
-
-3. Guarda UN ÚNICO archivo por página en: {out_dir}/page-{{NN}}-{style_file}-redesign.png
-{model_note}
-
-REGLAS (incumplirlas invalida el trabajo):
-- UNA SOLA IMAGEN POR PÁGINA: llama a images_generate con count=1. No generes 2 ni 4
-  alternativas: cada variante extra cuesta créditos y se descarta. Si la herramienta
-  devuelve varias, guarda SOLO la mejor y no escribas las demás en disco.
-- Los parámetros de modelo/resolución/calidad indicados arriba son obligatorios: no los
-  cambies ni dejes que la herramienta elija otros, porque determinan el coste en créditos.
-- UN SOLO ARCHIVO POR PÁGINA en {out_dir}: ni .jpg y .png de la misma página, ni sufijos -1/-2.
-- El prompt de arriba es literal: las indicaciones que contiene vienen del equipo y no son negociables.
-- Usa SIEMPRE el MCP magnific. Si falla la autenticación OAuth, responde "MAGNIFIC_AUTH_REQUIRED".
-- Las cifras, porcentajes y años del original deben aparecer EXACTAMENTE igual en el rediseño.
-- Responde al final con un JSON: {{"generated": [{{"page": N, "file": "ruta/relativa"}}], "credits_used": N, "credits_left": N, "errors": [...]}}
-"""
-
 
 def compose_magnific_prompt(style_prompt: str, extra: str, palette: str, feedback: str,
                             refine: bool = False, consistent: bool = False) -> str:
@@ -249,27 +207,6 @@ def run_qc(entry: dict, source_pdf: Path | None) -> dict:
         return {"ok": False, "error": str(e)[:200]}
 
 
-def parse_credits(output: str) -> tuple[float | None, float | None]:
-    """Pull credit figures out of the agent transcript (JSON first, prose second)."""
-    used = left = None
-    for m in re.finditer(r'"credits_used"\s*:\s*([\d.]+)', output):
-        used = float(m.group(1))
-    for m in re.finditer(r'"credits_left"\s*:\s*([\d.]+)', output):
-        left = float(m.group(1))
-    if used is None:
-        for pat in (r"(?:cr[ée]ditos?|credits?)\s*(?:consumidos|usados|used|spent)\D{0,12}([\d.]+)",
-                    r"([\d.]+)\s*(?:cr[ée]ditos?|credits?)\s*(?:consumidos|usados|used|spent)"):
-            m = re.search(pat, output, re.I)
-            if m:
-                used = float(m.group(1))
-                break
-    if left is None:
-        m = re.search(r"(?:cr[ée]ditos?|credits?)\s*(?:restantes|disponibles|left|remaining|balance)\D{0,12}([\d.]+)", output, re.I)
-        if m:
-            left = float(m.group(1))
-    return used, left
-
-
 def finish_job(conn, job_id: int, state: str, result: dict | None = None,
                error: str | None = None, credits: float | None = None) -> None:
     if not job_id:
@@ -312,9 +249,6 @@ def main() -> int:
     ap.add_argument("--style-anchor", default="",
                     help="existing redesign (path relative to the project root) whose look the "
                          "new pages must follow — for adding pages to a deck that already exists")
-    ap.add_argument("--engine", default="direct", choices=("direct", "agent"),
-                    help="direct = MCP API call (deterministic, exact credits); "
-                         "agent = the old Hermes agent, kept as a fallback")
     ap.add_argument("--no-qc", action="store_true", help="skip the OCR data check")
     ap.add_argument("--print-prompt", action="store_true",
                     help="print the exact Magnific prompt and exit, without generating")
@@ -371,19 +305,6 @@ def main() -> int:
 
     style_file = re.sub(r"[^a-z0-9_-]+", "_", a.style_id.lower()).strip("_")[:20] or "editorial"
 
-    # the model is a credit-cost decision, so it is pinned here instead of left to the agent
-    model_bits = []
-    if a.model and a.model != "auto":
-        model_bits.append(f'mode="{a.model}"')
-    if a.resolution:
-        model_bits.append(f'resolution="{a.resolution}"')
-    if a.quality:
-        model_bits.append(f'quality="{a.quality}"')
-    model_note = ("\n4. OBLIGATORIO: llama a images_generate con estos parámetros exactos, "
-                  "además del prompt y la referencia: " + ", ".join(model_bits) + ", count=1.\n"
-                  if model_bits else
-                  "\n4. Deja que Magnific elija el modelo (mode=\"auto\") y usa count=1.\n")
-
     # keep the images of the earlier attempts: this run writes over their filenames
     prior_generated = json.loads(row["generated"] or "[]")
     moved = archive_previous_versions(prior_generated, out_dir, pages, a.pdf_slug, a.style_id)
@@ -415,18 +336,7 @@ def main() -> int:
             anchor_img = candidate
 
     refs = {p: (base_img or img) for p, img in originals}
-    pages_list = "\n".join(f"- Página {p}: {refs[p]}" for p, _ in originals)
-    base_note = ("\nIMPORTANTE: la imagen indicada arriba NO es la página cruda del PDF, es un "
-                 "rediseño anterior ya aprobado. Úsala como referencia y aplica solo las "
-                 "correcciones del prompt: mantén su composición, tipografía y paleta.\n"
-                 if base_img else "")
-    prompt = PROMPT_TEMPLATE.format(
-        n=len(originals), org=row["organisation"], pages_list=pages_list,
-        out_dir=out_dir, style_file=style_file, magnific_prompt=magnific_prompt,
-        base_note=base_note, model_note=model_note,
-    )
 
-    started_at = time.time()
     set_status("running", lead_id=a.lead_id, pages=pages)
 
     previous = prior_generated
@@ -473,94 +383,40 @@ def main() -> int:
         }
 
     generated: list[dict] = []
-    extras: list[str] = []
     credits_used = credits_left = None
     output = ""
-    engine = a.engine
 
-    # ---------------------------------------------------------------- direct
-    if engine == "direct":
-        sys.path.insert(0, str(Path(__file__).parent))
-        from magnific_client import MagnificAuthError
-        try:
-            produced, spent, errors, left = run_direct(
-                originals, refs, out_dir, style_file, magnific_prompt,
-                a.model, a.resolution, a.quality,
-                consistent=consistent, anchor_img=anchor_img,
-                consistent_prompt=consistent_prompt)
-        except Exception as e:                    # no session, network down…
-            produced, spent, errors, left = [], 0.0, [str(e)], None
-            # la excepción tipada dice si es un problema de sesión; buscar "login"
-            # en el texto ataba esta decisión a cómo esté redactado el mensaje
-            if isinstance(e, MagnificAuthError):
-                engine = "agent"                  # fall back to the old path
-            output = str(e)
+    sys.path.insert(0, str(Path(__file__).parent))
+    from magnific_client import MagnificAuthError
 
-        if engine == "direct":
-            originals_by_page = dict(originals)
-            for item in produced:
-                generated.append(entry_for(item["page"], originals_by_page[item["page"]],
-                                           item["path"], item["credits"], "direct"))
-            credits_used = spent or None
-            credits_left = left
-            output = "\n".join(errors)
-            if not generated:
-                message = errors[0] if errors else "la API no devolvió ninguna imagen"
-                set_status("error", error=message)
-                finish_job(conn, a.job_id, "error", error=message, credits=credits_used)
-                return 1
+    try:
+        produced, spent, errors, left = run_direct(
+            originals, refs, out_dir, style_file, magnific_prompt,
+            a.model, a.resolution, a.quality,
+            consistent=consistent, anchor_img=anchor_img,
+            consistent_prompt=consistent_prompt)
+    except MagnificAuthError as e:
+        # el panel busca este marcador para ofrecer el login en vez de un error suelto
+        set_status("error", error="MAGNIFIC_AUTH_REQUIRED", tail=str(e))
+        finish_job(conn, a.job_id, "error", error="MAGNIFIC_AUTH_REQUIRED")
+        return 1
+    except Exception as e:                        # red caída, MCP fuera de servicio…
+        set_status("error", error=str(e)[:200])
+        finish_job(conn, a.job_id, "error", error=str(e)[:200])
+        return 1
 
-    # ----------------------------------------------------------------- agent
-    if engine == "agent":
-        prompt = PROMPT_TEMPLATE.format(
-            n=len(originals), org=row["organisation"], pages_list=pages_list,
-            out_dir=out_dir, style_file=style_file, magnific_prompt=magnific_prompt,
-            base_note=base_note, model_note=model_note,
-        )
-        try:
-            result = subprocess.run(
-                ["hermes", "chat", "-q", prompt],
-                capture_output=True, text=True, timeout=1500, cwd=str(ROOT),
-            )
-            output = (result.stdout or "") + "\n" + (result.stderr or "")
-        except subprocess.TimeoutExpired:
-            set_status("error", error="timeout (25min)")
-            finish_job(conn, a.job_id, "error", error="timeout (25 min)")
-            return 1
-
-        # keep agent output for debugging
-        (ROOT / ".generate_last_output.log").write_text(output[-8000:])
-
-        # discover produced files FIRST — a successful generation wins over any
-        # incidental "oauth"/"magnific" mention in the agent's prose
-        # ...-vN files are archived earlier attempts: they must never be picked up as
-        # the output of this run
-        out_files = [f for f in out_dir.glob("page-*")
-                     if f.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
-                     and not re.search(r"-v\d+$", f.stem)]
-        for p, orig in originals:
-            # prefer current style suffix, fall back to any page-N redesign
-            style_cands = [f for f in out_files if re.search(rf"page-0*{p}\b[^.]*{re.escape(style_file)}[^.]*redesign", f.name, re.I)]
-            cands = style_cands or [f for f in out_files if re.search(rf"page-0*{p}\b[^.]*redesign", f.name, re.I)]
-            if cands:
-                cands = sorted(cands, key=lambda f: f.stat().st_mtime, reverse=True)
-                cand = cands[0]
-                # one image per page is the contract; surface any surplus instead of
-                # silently ignoring it, because every extra variant burned credits
-                for surplus in cands[1:]:
-                    if surplus.stat().st_mtime >= started_at:
-                        extras.append(str(surplus.relative_to(ROOT)))
-                generated.append(entry_for(p, orig, cand, None, "agent"))
-
-        credits_used, credits_left = parse_credits(output)
-
-    # only treat as auth failure when NOTHING was produced AND the agent
-    # explicitly emitted the marker as its own token
+    originals_by_page = dict(originals)
+    for item in produced:
+        generated.append(entry_for(item["page"], originals_by_page[item["page"]],
+                                   item["path"], item["credits"], "direct"))
+    credits_used = spent or None
+    credits_left = left
+    output = "\n".join(errors)
     if not generated:
-        if re.search(r"MAGNIFIC_AUTH_REQUIRED", output):
-            set_status("error", error="MAGNIFIC_AUTH_REQUIRED")
-            finish_job(conn, a.job_id, "error", error="MAGNIFIC_AUTH_REQUIRED", credits=credits_used)
-            return 1
+        message = errors[0] if errors else "la API no devolvió ninguna imagen"
+        set_status("error", error=message)
+        finish_job(conn, a.job_id, "error", error=message, credits=credits_used)
+        return 1
 
     if generated and not a.no_qc:
         for g in generated:
@@ -587,7 +443,7 @@ def main() -> int:
                    credits_used=credits_used, credits_left=credits_left)
         payload = {"ok": True, "generated": generated, "style_id": a.style_id,
                    "style_name": a.style_name, "credits_used": credits_used,
-                   "credits_left": credits_left, "extra_variants": extras}
+                   "credits_left": credits_left}
         finish_job(conn, a.job_id, "done", result=payload, credits=credits_used)
         print(json.dumps(payload, ensure_ascii=False))
         return 0
