@@ -3,12 +3,13 @@ import {
   X, Globe, Linkedin, Mail, FileText, Loader2, Download, Images, Wand2,
   Copy, Save, ExternalLink, Check, ChevronLeft, ChevronRight, Trash2, FolderOpen,
   Star, Gauge, Sparkles, ArrowUp, ArrowDown, ArrowUpDown, FileDown, Palette, Coins, Eye, ListChecks,
-  ShieldAlert,
+  ShieldAlert, History,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import BeforeAfterModal from './BeforeAfterModal';
 import type { Lead, PageThumb, StylePreset, GeneratedItem, PdfItem, PaletteColor, MagnificModel, ModelCatalogResponse } from '../lib/types';
 import { fileUrl, fmtDate, decodeHtml, creditsPerImage } from '../lib/types';
+import { composeCurrent, composeRun, runLabel, runsOf } from '../lib/runs';
 import { Badge, priorityVariant } from './ui/badge';
 
 interface Props {
@@ -183,7 +184,28 @@ function PdfGallery({
     if (!styles.some(([id]) => id === active)) setActive(styles[0]?.[0] ?? '');
   }, [items, active, styles.map(([id]) => id).join(',')]);
 
-  const pairs = items.filter((g) => g.style === active).sort((a, b) => a.page - b.page);
+  // Qué pase se está mirando. 'current' es lo vigente: la cabeza de cada página.
+  const [run, setRun] = React.useState<string>('current');
+  const runs = React.useMemo(() => runsOf(generated, pdfSlug, active),
+                             [generated, pdfSlug, active]);
+
+  // cambiar de estilo vuelve a lo vigente: un pase pertenece a un estilo
+  React.useEffect(() => { setRun('current'); }, [active]);
+
+  const composed = React.useMemo(
+    () => (run === 'current'
+      ? composeCurrent(generated, pdfSlug, active)
+      : composeRun(generated, pdfSlug, active, run)),
+    [generated, pdfSlug, active, run]);
+
+  // un pase que desaparece (borrado, recarga) no puede dejar la vista vacía
+  React.useEffect(() => {
+    if (run !== 'current' && !runs.some((r) => r.key === run)) setRun('current');
+  }, [runs, run]);
+
+  const viewingOld = run !== 'current';
+  const pairs = composed.map((c) => c.item);
+  const inherited = new Set(composed.filter((c) => !c.fromRun).map((c) => c.item.generated_img));
 
   // comparison PDF for THIS report only
   const [building, setBuilding] = React.useState(false);
@@ -244,8 +266,13 @@ function PdfGallery({
         body: JSON.stringify({
           lead_id: leadId,
           pdf_slug: pdfSlug,
-          // an explicit pick replaces the filters entirely
-          select: picking && chosen.length ? orderedChosen : undefined,
+          // una selección explícita manda sobre todo lo demás; si no, y se está
+          // mirando un pase anterior, va exactamente lo que hay en pantalla
+          select: picking && chosen.length
+            ? orderedChosen
+            : viewingOld
+              ? pairs.map((g) => g.generated_img)
+              : undefined,
           allow_failed_qc: allowFailedQc,
           styles: !picking && onlyActive && active ? [active] : undefined,
           hero_only: !picking && heroOnly,
@@ -316,6 +343,47 @@ function PdfGallery({
               ))}
             </div>
           )}
+          {runs.length > 1 && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              <span className="text-[10px] uppercase tracking-widest text-muted mr-0.5">Pases</span>
+              <button
+                onClick={() => setRun('current')}
+                title="Lo vigente: la versión más reciente de cada página"
+                className={`text-[10px] rounded-md border px-2 py-1 transition-all duration-200 hover:scale-[1.03] active:scale-95 cursor-pointer ${
+                  !viewingOld
+                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                    : 'border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:border-emerald-500/50 hover:text-emerald-500'
+                }`}
+              >
+                Actual
+              </button>
+              {runs.map((r) => (
+                <button
+                  key={r.key}
+                  onClick={() => setRun(r.key)}
+                  title={`Cómo se veía tras esta generación · páginas ${r.pages.join(', ')}`}
+                  className={`text-[10px] rounded-md border px-2 py-1 transition-all duration-200 hover:scale-[1.03] active:scale-95 cursor-pointer ${
+                    run === r.key
+                      ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      : 'border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:border-emerald-500/50 hover:text-emerald-500'
+                  }`}
+                >
+                  Pase {runs.length - r.ordinal + 1} <span className="text-zinc-400 dark:text-zinc-600">· {runLabel(r)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {viewingOld && (
+            <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-amber-500/50 bg-amber-500/5 px-2 py-1.5 text-[10px] text-amber-700 dark:text-amber-400">
+              <History size={11} className="shrink-0" />
+              <span>
+                Estás viendo un pase anterior. El PDF comparativo y el ganador se
+                aplican a lo que ves aquí, no a lo vigente.
+              </span>
+            </div>
+          )}
+
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-emerald-500/20 pt-2.5">
             <button
               onClick={build}
@@ -493,8 +561,18 @@ function PdfGallery({
                       <Star size={11} fill={g.hero ? 'currentColor' : 'none'} />
                     </button>
                   </span>
-                  <span className="text-emerald-500 truncate" title={g.extra_prompt ? `Indicaciones: ${g.extra_prompt}` : g.style_prompt}>
-                    {g.styleName}
+                  <span className="inline-flex items-center gap-1.5 min-w-0">
+                    {viewingOld && inherited.has(g.generated_img) && (
+                      <span
+                        className="shrink-0 rounded bg-zinc-200 dark:bg-zinc-800 px-1 py-px text-[9px] text-zinc-500"
+                        title="Esta página no se generó en este pase: es la que estaba vigente entonces"
+                      >
+                        heredada
+                      </span>
+                    )}
+                    <span className="text-emerald-500 truncate" title={g.extra_prompt ? `Indicaciones: ${g.extra_prompt}` : g.style_prompt}>
+                      {g.styleName}
+                    </span>
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -994,10 +1072,13 @@ export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses,
 
   /* ---------- mark the winning redesign ---------- */
   const setHero = async (item: GeneratedItem) => {
+    // El ganador es una imagen concreta, no «esta página en este estilo»: al
+    // poder mirar pases anteriores, la estrella tiene que marcar la que se ve.
+    const on = !item.hero;
     const updated = (lead.generated ?? []).map((g) => ({
       ...g,
-      hero: g.pdf === item.pdf && g.page === item.page && g.style === item.style
-        ? !g.hero
+      hero: g.generated_img === item.generated_img && g.page === item.page
+        ? on
         : g.pdf === item.pdf && g.page === item.page
           ? false          // one winner per page
           : g.hero,

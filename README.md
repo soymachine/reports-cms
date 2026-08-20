@@ -71,6 +71,7 @@ por HTTP Basic, cabecera `x-dashboard-token` o `?token=…` una vez.
 
 ```bash
 .venv/bin/python -m pytest tests -q        # lógica de pipeline, QC y créditos
+npm --prefix dashboard run test:unit       # composición de pases (Node 22+)
 npm --prefix dashboard run build && bash tests/smoke_api.sh   # endpoints vivos
 ```
 

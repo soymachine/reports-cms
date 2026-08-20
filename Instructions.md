@@ -219,6 +219,22 @@ API. Guarda en `generated/{lead_id}/redesigns/page-{NN}-{style}-redesign.png`.
 
 Registra el resultado en `leads.generated`. Lee `settings.json` para `max_pages`.
 
+### Pases (versiones de un estilo)
+
+El número de versión de cada rediseño se calcula **por página**
+(`generate_redesign.py → next_version`), así que regenerar una sola página deja
+esa página en v2 y las demás en v1: «la v2 del conjunto» no existe.
+
+Lo que sí existe es el **pase**: lo que produjo un clic en «Generar», identificado
+por `job_id` (o por el minuto de `created_at` en los rediseños antiguos). La
+galería de antes/después ofrece un chip por pase; al elegir uno,
+`dashboard/src/lib/runs.ts` compone cómo se veía el informe entonces — las páginas
+de ese pase, y para el resto la vigente en aquel momento, marcada como «heredada».
+
+Mientras se mira un pase anterior, el PDF comparativo se lleva exactamente lo que
+hay en pantalla y la estrella marca la imagen concreta que se ve. Se avisa con una
+banda ámbar para que nadie genere un deck antiguo sin querer.
+
 ## 8. Configuración (`settings.json`)
 
 ```json
