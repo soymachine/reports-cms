@@ -325,12 +325,15 @@ npm --prefix dashboard install</div>
 
     <article class="step" data-step="5">
       <div class="num" tabindex="0" role="checkbox" aria-checked="false" aria-label="Marcar paso 5">05</div>
-      <h2>Autorizar Magnific <span class="chip pending">pendiente · fase 1</span></h2>
+      <h2>Autorizar Magnific <span class="chip">listo</span></h2>
       <p>
         Es lo único que necesita internet y una cuenta. Sin esto todo funciona
         salvo generar rediseños.
       </p>
-      <div class="cmd">.venv/bin/python scripts/magnific_login.py</div>
+      <div class="cmd">.venv/bin/python scripts/magnific_login.py
+
+<span class="c"># para comprobar más adelante si la sesión sigue viva</span>
+.venv/bin/python scripts/magnific_login.py --status</div>
       <p>
         Se abre el navegador, autorizas y la sesión queda guardada en
         <code>~/.thinkthings/magnific/</code>. Se renueva sola a partir de ahí.

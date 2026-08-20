@@ -58,7 +58,7 @@ crítico. Claude Code queda para lo que es agéntico de verdad: el cazador.
 
 ## 3. Fases
 
-### Fase 0 — Verificación previa (5 min, bloquea todo lo demás)
+### Fase 0 — Verificación previa (5 min, bloquea todo lo demás) — HECHA: escenario A
 
 Antes de escribir el login hay que confirmar que el MCP de Magnific permite
 registro dinámico de clientes. **Ya está automatizado** en
@@ -91,7 +91,7 @@ servidor: no dice nada sobre A/B/C. Repetir con conexión directa.
 > contenedor no tiene tu `~/.hermes/` y la política de red del entorno bloquea el
 > dominio de Magnific. Es un paso de tu máquina.
 
-### Fase 1 — `scripts/magnific_login.py` (núcleo del trabajo)
+### Fase 1 — `scripts/magnific_login.py` (núcleo del trabajo) — HECHA
 
 Un script sin dependencias externas (`urllib` + `http.server`, como el resto):
 
