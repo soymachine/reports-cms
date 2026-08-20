@@ -36,7 +36,7 @@ function MagnificDot() {
   const label =
     status === 'connected' ? 'Magnific MCP activo' :
     status === 'loading' ? 'Magnific: comprobando…' :
-    status === 'auth_required' ? 'Magnific: login necesario (hermes mcp login magnific)' :
+    status === 'auth_required' ? 'Magnific: login necesario (scripts/magnific_login.py)' :
     'Magnific: error de conexión';
 
   return (

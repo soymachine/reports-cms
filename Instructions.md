@@ -49,7 +49,7 @@ Flujo de trabajo:
 - **Backend scripts**: Python 3.12, venv en `.venv/`, `openpyxl`, `sqlite3`.
 - **Dashboard**: Astro 4, React 18, Tailwind 3, `better-sqlite3`, GSAP, `lucide-react`.
 - **Render PDF**: `pdftoppm` (poppler).
-- **Generación imágenes**: MCP `magnific` vía `hermes chat`.
+- **Generación imágenes**: MCP `magnific` por llamada directa (`scripts/magnific_client.py`).
 - **Buscador**: DuckDuckGo Lite con `curl` (el agente nocturno no usa `web_search` de Hermes porque no está configurado).
 
 ## 4. Cómo arrancar
@@ -66,9 +66,9 @@ Flujo de trabajo:
   ```bash
   brew install poppler
   ```
-- Hermes CLI con MCP Magnific configurado. Si la primera generación pide OAuth:
+- Sesión de Magnific autorizada una vez por máquina (no requiere Hermes):
   ```bash
-  hermes mcp login magnific
+  .venv/bin/python scripts/magnific_login.py
   ```
 
 ### Comandos habituales
@@ -249,7 +249,7 @@ Registra el resultado en `leads.generated`. Lee `settings.json` para `max_pages`
 5. **Respetar los tokens de color** en `global.css`; evita `text-zinc-500 dark:text-zinc-400` directo; usa `.text-muted` / `.border-subtle`.
 6. **Fuente IBM Plex Mono weight 400**; el usuario no quiere negritas.
 7. **Mantén animaciones ligeras**: `transition-all duration-200`, micro-escala en hover/active.
-8. **No subas secretos**: credenciales de Magnific están en `~/.hermes/config.yaml`, no en el repo.
+8. **No subas secretos**: la sesión de Magnific vive en `~/.thinkthings/magnific/`, no en el repo.
 9. **Prueba con leads reales** (por ejemplo `id=1` o `id=13`) antes de decir que algo funciona.
 
 ## 10. Problemas conocidos / pendientes

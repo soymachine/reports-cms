@@ -868,7 +868,7 @@ export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses,
           const extras = done.reduce((n, j) => n + (j.result?.extra_variants?.length ?? 0), 0);
           setGenMsg(
             auth
-              ? '✗ Magnific requiere login: ejecuta `hermes mcp login magnific` en terminal'
+              ? '✗ Magnific requiere login: ejecuta `.venv/bin/python scripts/magnific_login.py` en terminal'
               : images
                 ? `✓ ${images} rediseño(s)${credits ? ` · ${credits} créditos` : ''}` +
                   `${failed.length ? ` · ${failed.length} fallido(s)` : ''}` +

@@ -170,7 +170,7 @@ def run_direct(originals, refs, out_dir: Path, style_file: str, magnific_prompt:
     Returns (files, credits spent, errors, credits left in the account).
     """
     sys.path.insert(0, str(Path(__file__).parent))
-    from magnific_client import Magnific, MagnificError
+    from magnific_client import Magnific, MagnificAuthError, MagnificError
 
     produced: list[dict] = []
     errors: list[str] = []
@@ -480,6 +480,8 @@ def main() -> int:
 
     # ---------------------------------------------------------------- direct
     if engine == "direct":
+        sys.path.insert(0, str(Path(__file__).parent))
+        from magnific_client import MagnificAuthError
         try:
             produced, spent, errors, left = run_direct(
                 originals, refs, out_dir, style_file, magnific_prompt,
@@ -488,7 +490,9 @@ def main() -> int:
                 consistent_prompt=consistent_prompt)
         except Exception as e:                    # no session, network down…
             produced, spent, errors, left = [], 0.0, [str(e)], None
-            if "login" in str(e).lower() or "sesión" in str(e).lower():
+            # la excepción tipada dice si es un problema de sesión; buscar "login"
+            # en el texto ataba esta decisión a cómo esté redactado el mensaje
+            if isinstance(e, MagnificAuthError):
                 engine = "agent"                  # fall back to the old path
             output = str(e)
 

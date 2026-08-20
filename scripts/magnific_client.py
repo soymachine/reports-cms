@@ -7,14 +7,14 @@ it spent. That indirection produced every expensive bug we have hit: surplus
 variants that got paid for and thrown away, files overwritten, credits scraped
 out of prose, auth failures detected by grepping for a word.
 
-This module speaks the MCP streamable-HTTP protocol itself, reusing the OAuth
-session Hermes already established (`hermes mcp login magnific`). Calls are
-deterministic and the credit figures come from the API response.
+This module speaks the MCP streamable-HTTP protocol itself, over the OAuth
+session that `scripts/magnific_login.py` establishes. Calls are deterministic and
+the credit figures come from the API response.
 
-The token is read from ~/.hermes/mcp-tokens/magnific.json at call time and is
-never logged. When it has expired the client refreshes it with the stored
-refresh token; if that fails, callers get MagnificAuthError and should fall back
-to the agent path or ask the user to log in again.
+The token is read at call time from ~/.thinkthings/magnific/magnific.json (or,
+during the migration, from the old Hermes directory) and is never logged. When it
+has expired the client refreshes it with the stored refresh token; if that fails,
+callers get MagnificAuthError and should ask the user to log in again.
 
 Usage as a library:
     from magnific_client import Magnific
@@ -32,7 +32,26 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-HERMES_TOKENS = Path.home() / ".hermes" / "mcp-tokens"
+OWN_TOKENS = Path.home() / ".thinkthings" / "magnific"
+HERMES_TOKENS = Path.home() / ".hermes" / "mcp-tokens"   # legado, se borrará
+LOGIN_HINT = "ejecuta `.venv/bin/python scripts/magnific_login.py`"
+
+
+def default_token_dir() -> Path:
+    """Dónde está la sesión: la nuestra manda, la de Hermes sirve de puente.
+
+    Mientras dure la migración conviven las dos. Una máquina que ya hizo el login
+    propio nunca vuelve a mirar ~/.hermes; una que todavía no, sigue funcionando
+    con lo que dejó Hermes en su día.
+    """
+    env = os.environ.get("MAGNIFIC_TOKEN_DIR")
+    if env:
+        return Path(env)
+    if (OWN_TOKENS / "magnific.json").exists():
+        return OWN_TOKENS
+    if (HERMES_TOKENS / "magnific.json").exists():
+        return HERMES_TOKENS
+    return OWN_TOKENS
 DEFAULT_URL = os.environ.get("MAGNIFIC_MCP_URL", "https://mcp.magnific.com")
 TIMEOUT = 180
 
@@ -58,9 +77,9 @@ def _post(url: str, data: bytes | None, headers: dict[str, str], *,
 class Magnific:
     """Minimal MCP client: initialize once, then tools/call."""
 
-    def __init__(self, url: str = DEFAULT_URL, token_dir: Path = HERMES_TOKENS):
+    def __init__(self, url: str = DEFAULT_URL, token_dir: Path | None = None):
         self.url = url.rstrip("/")
-        self.token_dir = token_dir
+        self.token_dir = Path(token_dir) if token_dir else default_token_dir()
         self.session_id: str | None = None
         self._token: str | None = None
         self._id = 0
@@ -82,8 +101,7 @@ class Magnific:
 
         path = self._token_file()
         if not path.exists():
-            raise MagnificAuthError(
-                "no hay sesión de Magnific: ejecuta `hermes mcp login magnific`")
+            raise MagnificAuthError(f"no hay sesión de Magnific: {LOGIN_HINT}")
         data = json.loads(path.read_text())
         token = data.get("access_token")
         expires_at = float(data.get("expires_at") or 0)
@@ -100,8 +118,7 @@ class Magnific:
             # expiry may simply be stale; let the server be the judge
             self._token = token
             return token
-        raise MagnificAuthError(
-            "la sesión de Magnific ha caducado: ejecuta `hermes mcp login magnific`")
+        raise MagnificAuthError(f"la sesión de Magnific ha caducado: {LOGIN_HINT}")
 
     def _refresh(self, data: dict) -> str | None:
         meta_path = self.token_dir / "magnific.meta.json"
@@ -132,7 +149,7 @@ class Magnific:
         token = fresh.get("access_token")
         if not token:
             return None
-        # write the rotated session back so the next run (and Hermes) reuses it
+        # write the rotated session back so the next run reuses it
         data.update(fresh)
         data["expires_at"] = time.time() + float(fresh.get("expires_in") or 3600)
         try:
@@ -180,8 +197,7 @@ class Magnific:
                            "method": method, "params": params or {}}).encode()
         status, raw, headers = _post(self.url, body, self._headers(), timeout=timeout)
         if status in (401, 403):
-            raise MagnificAuthError(
-                "Magnific rechazó la sesión (401/403): ejecuta `hermes mcp login magnific`")
+            raise MagnificAuthError(f"Magnific rechazó la sesión (401/403): {LOGIN_HINT}")
         if status >= 400:
             raise MagnificError(f"HTTP {status}: {raw[:300].decode('utf-8', 'replace')}")
         sid = headers.get("Mcp-Session-Id") or headers.get("mcp-session-id")

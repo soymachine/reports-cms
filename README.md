@@ -93,11 +93,17 @@ hermes cron pause d28024ce08c5   # pausar
 
 ## Requisito: Magnific OAuth
 
-La primera generación de rediseños requiere autorizar el MCP de Magnific una vez:
+La primera generación de rediseños requiere autorizar el MCP de Magnific una vez
+por máquina:
 
 ```bash
-hermes mcp login magnific
+.venv/bin/python scripts/magnific_login.py            # login
+.venv/bin/python scripts/magnific_login.py --status   # ¿sigue viva la sesión?
 ```
+
+La sesión queda en `~/.thinkthings/magnific/` y se renueva sola. No copies esos
+ficheros a otra máquina: el token de refresco rota y las dos se echarían la una a
+la otra.
 
 ## Requisitos del sistema
 
