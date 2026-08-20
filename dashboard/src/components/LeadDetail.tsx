@@ -205,7 +205,7 @@ function PdfGallery({
 
   const viewingOld = run !== 'current';
   const currentRun = runs.find((r) => r.key === run);
-  const runTitle = currentRun ? `Pase ${runs.length - currentRun.ordinal + 1}` : null;
+  const runTitle = currentRun ? `Pase ${runs.length - currentRun.ordinal + 1}` : null;  // ordinal 1 = el más nuevo
   const pairs = composed.map((c) => c.item);
   const inherited = new Set(composed.filter((c) => !c.fromRun).map((c) => c.item.generated_img));
 
@@ -345,32 +345,39 @@ function PdfGallery({
               ))}
             </div>
           )}
-          {runs.length > 1 && (
+          {/* La fila se dibuja siempre, también con un único pase: si solo apareciera
+              al haber dos, un estilo generado una vez no enseñaría nada y no habría
+              forma de saber que esto existe. */}
+          {runs.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 mt-2">
               <span className="text-[10px] uppercase tracking-widest text-muted mr-0.5">Pases</span>
-              <button
-                onClick={() => setRun('current')}
-                title="Lo vigente: la versión más reciente de cada página"
-                className={`text-[10px] rounded-md border px-2 py-1 transition-all duration-200 hover:scale-[1.03] active:scale-95 cursor-pointer ${
-                  !viewingOld
-                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                    : 'border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:border-emerald-500/50 hover:text-emerald-500'
-                }`}
-              >
-                Actual
-              </button>
-              {runs.map((r) => (
+              {runs.length > 1 && (
+                <button
+                  onClick={() => setRun('current')}
+                  title="Lo vigente: la versión más reciente de cada página"
+                  className={`text-[10px] rounded-md border px-2 py-1 transition-all duration-200 hover:scale-[1.03] active:scale-95 cursor-pointer ${
+                    !viewingOld
+                      ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      : 'border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:border-emerald-500/50 hover:text-emerald-500'
+                  }`}
+                >
+                  Actual
+                </button>
+              )}
+              {/* de izquierda a derecha en el orden en que se generaron: «pase 1,
+                  pase 2» es como se habla de ellos */}
+              {[...runs].reverse().map((r, i) => (
                 <button
                   key={r.key}
                   onClick={() => setRun(r.key)}
                   title={`Cómo se veía tras esta generación · páginas ${r.pages.join(', ')}`}
                   className={`text-[10px] rounded-md border px-2 py-1 transition-all duration-200 hover:scale-[1.03] active:scale-95 cursor-pointer ${
-                    run === r.key
+                    run === r.key || (runs.length === 1 && !viewingOld)
                       ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                       : 'border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:border-emerald-500/50 hover:text-emerald-500'
                   }`}
                 >
-                  Pase {runs.length - r.ordinal + 1} <span className="text-zinc-400 dark:text-zinc-600">· {runLabel(r)}</span>
+                  Pase {i + 1} <span className="text-zinc-400 dark:text-zinc-600">· {runLabel(r)}</span>
                 </button>
               ))}
             </div>
