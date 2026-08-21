@@ -36,7 +36,10 @@ marcan y se dejan como registro de decisiones.
     conmutable, ficha técnica, descarga y copia del PNG, atajos con su chuleta y
     preferencias recordadas. Las versiones se eligen siempre desde la barra, sin
     desplegar nada, y el deslizador compara contra lo que se le diga (el PDF, otro
-    estilo, otra versión) en vez de estar atado al original. Las imágenes cargan por miniatura primero y las vecinas
+    estilo, otra versión) en vez de estar atado al original. En el panel del lead
+    cada par lleva sus chips de versión, para componer el deck eligiendo página a
+    página la toma que mejor case, con aviso cuando lo que se mira ya no es lo que
+    entraría en el PDF. Las imágenes cargan por miniatura primero y las vecinas
     se precargan. De paso, escribir en el cuadro de «rehacer» ya no dispara los
     atajos ni cierra el comparador de golpe.
 

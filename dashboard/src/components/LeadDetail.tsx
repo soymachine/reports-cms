@@ -3,7 +3,7 @@ import {
   X, Globe, Linkedin, Mail, FileText, Loader2, Download, Images, Wand2,
   Copy, Save, ExternalLink, Check, ChevronLeft, ChevronRight, Trash2, FolderOpen,
   Star, Gauge, Sparkles, ArrowUp, ArrowDown, ArrowUpDown, FileDown, Palette, Coins, Eye, ListChecks,
-  ShieldAlert, ShieldCheck, Maximize2, Rows3,
+  ShieldAlert, ShieldCheck, Maximize2, Rows3, History,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import BeforeAfterModal from './BeforeAfterModal';
@@ -30,6 +30,10 @@ type PairSize = 'l' | 'm' | 's' | 'row';
 const PAIR_SIZE_KEY = 'thinkthings.pairsize.v1';
 const PAIR_COLS: Record<Exclude<PairSize, 'row'>, number> = { l: 2, m: 3, s: 4 };
 const PAIR_SIZE_LABEL: Record<PairSize, string> = { l: '100 %', m: '75 %', s: '50 %', row: 'Una fila' };
+
+/** A page of a report in one style — every version of it shares this key. */
+const pageKey = (g: GeneratedItem) => `${g.style}::${g.page}`;
+const versionId = (g: GeneratedItem) => `${g.style}::${g.page}::${g.version ?? 1}`;
 
 const inputCls =
   'w-full rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 transition-all duration-200 hover:border-emerald-500/50 focus:border-emerald-500 focus:outline-none';
@@ -191,7 +195,45 @@ function PdfGallery({
     if (!styles.some(([id]) => id === active)) setActive(styles[0]?.[0] ?? '');
   }, [items, active, styles.map(([id]) => id).join(',')]);
 
-  const pairs = items.filter((g) => g.style === active).sort((a, b) => a.page - b.page);
+  // Every attempt at each page of this report, newest first. The gallery used to
+  // show only the current one, but the last take is not always the best: with a
+  // deck of several pages the choice is about how they read together.
+  const versionsByPage = React.useMemo(() => {
+    const m = new Map<string, GeneratedItem[]>();
+    for (const g of generated) {
+      if (g.pdf !== pdfSlug || !g.generated_img) continue;
+      const k = pageKey(g);
+      m.set(k, [...(m.get(k) ?? []), g]);
+    }
+    for (const list of m.values()) list.sort((a, b) => (b.version ?? 1) - (a.version ?? 1));
+    return m;
+  }, [generated, pdfSlug]);
+
+  // A rerun used to overwrite the previous file, so an older entry can point at
+  // the newer image: its pixels are gone and offering it would show the wrong one.
+  const lostVersions = React.useMemo(() => {
+    const lost = new Set<string>();
+    for (const list of versionsByPage.values()) {
+      const seen = new Set<string>();
+      for (const v of list) {                       // newest first
+        if (seen.has(v.generated_img)) lost.add(versionId(v));
+        else seen.add(v.generated_img);
+      }
+    }
+    return lost;
+  }, [versionsByPage]);
+
+  // which version of each page is on screen, when it is not the current one
+  const [versionChoice, setVersionChoice] = React.useState<Record<string, string>>({});
+
+  /** The redesign to show for a page: the one picked by hand, else the current. */
+  const shown = React.useCallback((g: GeneratedItem) => {
+    const img = versionChoice[pageKey(g)];
+    if (!img || img === g.generated_img) return g;
+    return (versionsByPage.get(pageKey(g)) ?? []).find((v) => v.generated_img === img) ?? g;
+  }, [versionChoice, versionsByPage]);
+
+  const pairs = items.filter((g) => g.style === active).sort((a, b) => a.page - b.page).map(shown);
 
   // comparison PDF for THIS report only
   const [building, setBuilding] = React.useState(false);
@@ -236,11 +278,11 @@ function PdfGallery({
       )] as const);
   }, [generated, pdfSlug]);
 
-  /** Opening the picker starts from what the plain build would have produced. */
-  const startPicking = () => {
-    if (!chosen.length) {
+  /** Opening the picker starts from what is on screen, versions included. */
+  const startPicking = (reseed = false) => {
+    if (reseed || !chosen.length) {
       const base = items.filter((g) => (onlyActive ? g.style === active : true) && (heroOnly ? g.hero : true));
-      setChosen((base.length ? base : items).map((g) => g.generated_img));
+      setChosen((base.length ? base : items).map((g) => shown(g).generated_img));
     }
     setPicking(true);
   };
@@ -520,13 +562,37 @@ function PdfGallery({
             </span>
           </div>
 
+          {!picking && pairs.some((g) => g.superseded) && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/5 px-2 py-1 text-[10px] text-zinc-600 dark:text-zinc-400">
+              <History size={11} className="text-amber-500 shrink-0" />
+              <span>
+                Estás mirando una versión antigua en {pairs.filter((g) => g.superseded).length} página(s).
+                El PDF comparativo se lleva la última de cada página salvo que elijas las imágenes a mano.
+              </span>
+              <button
+                onClick={() => startPicking(true)}
+                className="rounded-md border border-amber-500/50 px-1.5 py-0.5 text-amber-600 dark:text-amber-400 transition-all duration-200 hover:bg-amber-500/10 active:scale-95"
+              >
+                Elegir imágenes con estas versiones
+              </button>
+              <button
+                onClick={() => setVersionChoice({})}
+                className="rounded-md border border-zinc-300 dark:border-zinc-700 px-1.5 py-0.5 text-zinc-500 transition-all duration-200 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-95"
+              >
+                Volver a las actuales
+              </button>
+            </div>
+          )}
+
           <div
             className="grid gap-2 mt-1.5"
             style={{ gridTemplateColumns: `repeat(${pairSize === 'row' ? Math.max(1, pairs.length) : PAIR_COLS[pairSize]}, minmax(0, 1fr))` }}
           >
-            {pairs.map((g) => (
+            {pairs.map((g) => {
+              const vers = versionsByPage.get(pageKey(g)) ?? [];
+              return (
               <div key={g.page} className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/30 p-2 min-w-0">
-                <div className="text-[10px] text-zinc-500 mb-1 flex items-center justify-between gap-1">
+                <div className="text-[10px] text-zinc-500 mb-1 flex items-center justify-between gap-1 flex-wrap">
                   <span className="inline-flex items-center gap-1 shrink-0">
                     p{g.page}
                     <button
@@ -545,6 +611,36 @@ function PdfGallery({
                       <ShieldAlert size={10} className={g.qc.verdict === 'fail' ? 'text-rose-500' : 'text-amber-500'} />
                     )}
                   </span>
+
+                  {vers.length > 1 && (
+                    <span className="inline-flex items-center gap-0.5 shrink-0">
+                      {[...vers].reverse().map((v) => {
+                        const lost = lostVersions.has(versionId(v));
+                        const on = v.generated_img === g.generated_img;
+                        return (
+                          <button
+                            key={versionId(v)}
+                            onClick={() => !lost && setVersionChoice((c) => ({ ...c, [pageKey(v)]: v.generated_img }))}
+                            disabled={lost}
+                            title={lost
+                              ? 'La imagen de esta versión se perdió: una regeneración posterior sobrescribió el archivo'
+                              : [v.superseded ? 'versión antigua' : 'versión actual',
+                                 v.feedback ? `corrección: ${v.feedback}` : 'toma inicial'].join(' · ')}
+                            className={`rounded border px-1 py-px text-[9px] leading-none transition-all duration-200 active:scale-95 ${
+                              lost
+                                ? 'border-zinc-200 dark:border-zinc-800 text-zinc-400 dark:text-zinc-700 line-through cursor-not-allowed'
+                                : on
+                                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                  : 'border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400'
+                            }`}
+                          >
+                            v{v.version ?? 1}
+                          </button>
+                        );
+                      })}
+                    </span>
+                  )}
+
                   <span className="text-emerald-500 truncate" title={g.extra_prompt ? `Indicaciones: ${g.extra_prompt}` : g.style_prompt}>
                     {g.styleName}
                   </span>
@@ -560,7 +656,9 @@ function PdfGallery({
                     />
                   </button>
                   <button onClick={() => onPreview(g)} title="Abrir el comparador a pantalla completa" className="relative text-left cursor-zoom-in group/ba">
-                    <div className="text-[9px] uppercase tracking-widest text-emerald-500 mb-1">Después</div>
+                    <div className="text-[9px] uppercase tracking-widest text-emerald-500 mb-1">
+                      Después{vers.length > 1 ? ` · v${g.version ?? 1}` : ''}
+                    </div>
                     <SmartImg
                       src={g.generated_img}
                       thumb={g.thumb}
@@ -573,7 +671,8 @@ function PdfGallery({
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}

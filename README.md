@@ -62,6 +62,11 @@ rápido.
 
 - **Tamaño de los pares** en el panel del lead: 100 %, 75 %, 50 % o «una fila»,
   que encoge las parejas hasta que todas las páginas del report caben de un vistazo.
+- **Versión por página** en el panel del lead: cada par lleva sus chips `v1 v2 v3`
+  cuando la página se ha rehecho, así el conjunto se monta con la toma que mejor
+  case en cada página y no siempre con la última. Si alguna no es la última, un
+  aviso recuerda que el PDF comparativo se lleva la última salvo que se elijan las
+  imágenes a mano — y ese selector se abre ya marcado con lo que estás viendo.
 - **Rejilla** en el comparador (`G`): una tarjeta por estilo, cada una con su propio
   antes y después. La escala se ajusta a mano, al 50 % o con «una fila», que calcula
   el tamaño máximo con el que entran todas sin bajar la vista.
