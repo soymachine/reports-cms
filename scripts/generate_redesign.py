@@ -103,9 +103,9 @@ def compose_magnific_prompt(style_prompt: str, extra: str, palette: str, feedbac
         "striking visual hierarchy."
     )
     if style_prompt.strip():
-        parts.append(f"Estilo: {style_prompt.strip()}")
+        parts.append(f"STYLE: {style_prompt.strip()}")
     if palette.strip():
-        parts.append(f"Paleta obligatoria (colores del informe original): {palette.strip()}")
+        parts.append(f"MANDATORY PALETTE (colours sampled from the original report): {palette.strip()}")
     if extra.strip():
         parts.append(f"INDICACIONES DEL EQUIPO (prioritarias sobre el estilo): {extra.strip()}")
     if feedback.strip():
