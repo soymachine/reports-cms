@@ -256,6 +256,15 @@ def main() -> int:
     conn.execute("UPDATE leads SET pdfs = ?, updated_at = datetime('now') WHERE id = ?",
                  (json.dumps(existing, ensure_ascii=False), a.lead_id))
 
+    # The pipeline stage belongs to the job, not to whoever has the tab open.
+    # The dashboard used to do this when the poll saw the job finish, so closing
+    # the lead left it in "Not contacted" with its reports already on disk.
+    if downloaded:
+        conn.execute(
+            "UPDATE leads SET status = 'PDF Found' WHERE id = ? AND status = 'Not contacted'",
+            (a.lead_id,),
+        )
+
     # newest publication date across all this lead's reports drives the timing radar
     dates = [p.get("published_at") for p in existing if p.get("published_at")]
     if dates:

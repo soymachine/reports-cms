@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import BeforeAfterModal from './BeforeAfterModal';
-import type { Lead, PageThumb, StylePreset, GeneratedItem, PdfItem, PaletteColor, MagnificModel, ModelCatalogResponse } from '../lib/types';
+import type { Lead, PageThumb, StylePreset, GeneratedItem, PdfItem, PaletteColor, MagnificModel, ModelCatalogResponse, Job } from '../lib/types';
 import { fileUrl, fmtDate, decodeHtml, creditsPerImage, pageThumb } from '../lib/types';
 import SmartImg from './SmartImg';
 import { Badge, priorityVariant } from './ui/badge';
@@ -796,6 +796,44 @@ export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses,
   useEffect(() => { loadPresets(); }, [loadPresets]);
 
   /* ---------- PDF search ---------- */
+
+  /** Watches a search that is already running on the server, wherever it started. */
+  const watchPdfSearch = React.useCallback((jobId: number) => {
+    setPdfSearching(true);
+    stopPoll();
+    pollRef.current = setInterval(async () => {
+      try {
+        const st = await (await fetch(`/api/jobs?id=${jobId}`)).json();
+        const job = st.job;
+        if (!job) return;
+        if (job.state === 'done') {
+          stopPoll();
+          setPdfSearching(false);
+          const n = job.result?.found ?? 0;
+          const rejected = job.result?.rejected?.length ?? 0;
+          setPdfMsg(
+            n > 0
+              ? `✓ ${n} PDF(s) descargados${rejected ? ` · ${rejected} descartados por calidad` : ''}`
+              : `Sin resultados esta vez${rejected ? ` (${rejected} descartados por calidad)` : ''}`
+          );
+          // the search wrote the reports, the timeline and the status itself:
+          // read the lead back instead of guessing any of it from here
+          const fresh = await (await fetch(`/api/leads?q=${encodeURIComponent(lead.organisation)}`)).json();
+          const updated = (fresh.leads as Lead[]).find((l) => l.id === lead.id);
+          if (updated) await onPatch(lead.id, { pdfs: updated.pdfs, status: updated.status });
+        } else if (job.state === 'error') {
+          stopPoll();
+          setPdfSearching(false);
+          setPdfMsg(`✗ ${job.error ?? 'error'}`);
+        }
+      } catch (e) {
+        stopPoll();
+        setPdfSearching(false);
+        setPdfMsg(`✗ ${String(e)}`);
+      }
+    }, 2500);
+  }, [lead.id, lead.organisation, onPatch]);
+
   const findPdfs = async () => {
     setPdfSearching(true);
     setPdfMsg(null);
@@ -812,40 +850,43 @@ export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses,
         return;
       }
       if (started.joined) setPdfMsg('Ya había una búsqueda en curso para este lead…');
-
-      stopPoll();
-      pollRef.current = setInterval(async () => {
-        try {
-          const st = await (await fetch(`/api/jobs?id=${started.job_id}`)).json();
-          const job = st.job;
-          if (!job) return;
-          if (job.state === 'done') {
-            stopPoll();
-            setPdfSearching(false);
-            const n = job.result?.found ?? 0;
-            const rejected = job.result?.rejected?.length ?? 0;
-            setPdfMsg(
-              n > 0
-                ? `✓ ${n} PDF(s) descargados${rejected ? ` · ${rejected} descartados por calidad` : ''}`
-                : `Sin resultados esta vez${rejected ? ` (${rejected} descartados por calidad)` : ''}`
-            );
-            if (n > 0) onPatch(lead.id, { status: lead.status === 'Not contacted' ? 'PDF Found' : lead.status });
-          } else if (job.state === 'error') {
-            stopPoll();
-            setPdfSearching(false);
-            setPdfMsg(`✗ ${job.error ?? 'error'}`);
-          }
-        } catch (e) {
-          stopPoll();
-          setPdfSearching(false);
-          setPdfMsg(`✗ ${String(e)}`);
-        }
-      }, 2500);
+      watchPdfSearch(started.job_id);
     } catch (e) {
       setPdfSearching(false);
       setPdfMsg(`✗ ${String(e)}`);
     }
   };
+
+  /**
+   * A job runs on the server, not in this modal: closing the lead only threw
+   * away the poller. On opening it again, find whatever is still in flight for
+   * this lead and pick the watch back up, so the buttons stop lying.
+   */
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const data = await (await fetch('/api/jobs')).json();
+        if (!alive) return;
+        const mine = ((data.active ?? []) as Job[]).filter((j) => j.lead_id === lead.id);
+        const search = mine.find((j) => j.type === 'find_pdfs');
+        if (search) {
+          setPdfMsg('Buscando desde antes de abrir la ficha…');
+          watchPdfSearch(search.id);
+          return;                       // one poller at a time
+        }
+        const gen = mine.filter((j) => j.type === 'generate').map((j) => j.id);
+        if (gen.length) {
+          setGenerating(true);
+          setGenMsg(`${gen.length} generación(es) en curso desde antes de abrir la ficha…`);
+          pollGeneration(gen);
+        }
+      } catch {
+        /* if the jobs panel is unreachable the buttons just stay idle */
+      }
+    })();
+    return () => { alive = false; };
+  }, [lead.id]);
 
   /* ---------- page rendering / selection ---------- */
   const renderPages = async (pdfFile: string) => {

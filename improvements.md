@@ -43,6 +43,14 @@ marcan y se dejan como registro de decisiones.
     se precargan. De paso, escribir en el cuadro de «rehacer» ya no dispara los
     atajos ni cierra el comparador de golpe.
 
+13. **Trabajos que sobreviven a la ficha** — la búsqueda de PDFs corre en el servidor,
+    pero el indicador vivía en el modal: al cerrar y reabrir el lead el botón decía
+    «Buscar PDFs de reports» como si no hubiera nada, y el salto a `PDF Found` no
+    llegaba a ocurrir porque lo hacía el navegador al ver terminar el trabajo. Ahora
+    el estado lo escribe el script, el panel se reengancha al trabajo en curso al
+    abrirse (búsqueda o generación), y la búsqueda registra su pid para que el
+    barrido de arranque no la dé por muerta al reiniciar el dashboard.
+
 ## Aplazadas (decisión del 19/08/2026)
 
 ### 4. Cerrar el bucle comercial: enviar y seguir

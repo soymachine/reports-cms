@@ -93,6 +93,13 @@ concurrencia (`settings.json` → `jobs.max_concurrent`, por defecto 2). Se pued
 desde el panel y, si el dashboard se reinicia a media generación, los trabajos huérfanos se
 cierran al arrancar en vez de quedarse girando para siempre.
 
+La búsqueda de PDFs también es un proceso del servidor: cerrar la ficha del lead no
+la detiene. Al volver a abrirla, el panel se engancha a lo que siga en curso para ese
+lead — búsqueda o generación — y el botón vuelve a decir «Buscando…» en vez de fingir
+que no pasa nada. El salto a `PDF Found` lo hace el propio `pdf_finder.py` al terminar,
+no el navegador, así que un report descargado no se queda con el lead en
+«Not contacted» por haber cerrado la pestaña.
+
 ## Acceso
 
 Sin configurar nada, el dashboard es abierto (uso local). Si lo expones, define

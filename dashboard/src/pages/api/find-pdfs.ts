@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { PROJECT_ROOT } from '../../lib/db';
-import { createJob, failJob, finishJob, inFlight } from '../../lib/jobs';
+import { createJob, failJob, finishJob, inFlight, setJobPid } from '../../lib/jobs';
 import { getSettings } from '../../lib/settings';
 
 export const prerender = false;
@@ -38,6 +38,7 @@ export const POST: APIRoute = async ({ request }) => {
   let stderr = '';
   try {
     const child = spawn(python, args, { cwd: PROJECT_ROOT });
+    setJobPid(job.id, child.pid);
     child.stdout.on('data', (d) => (stdout += d.toString()));
     child.stderr.on('data', (d) => (stderr += d.toString()));
     child.on('error', (err) => failJob(job.id, String(err)));

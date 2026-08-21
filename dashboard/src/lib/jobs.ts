@@ -37,6 +37,20 @@ export function createJob(type: JobType, leadId: number | null, payload: Record<
   return getJob(Number(info.lastInsertRowid))!;
 }
 
+/**
+ * Records the child's pid. The boot sweep in queue.ts closes every `running`
+ * job whose process is gone, and a job with no pid always looks gone: without
+ * this, restarting the dashboard reported a live search as interrupted.
+ */
+export function setJobPid(id: number, pid: number | null | undefined) {
+  if (!pid) return;
+  try {
+    db.prepare('UPDATE jobs SET pid = ? WHERE id = ?').run(pid, id);
+  } catch {
+    /* the column is added by the queue module; nothing to record without it */
+  }
+}
+
 export function getJob(id: number): Job | null {
   return parse(db.prepare('SELECT * FROM jobs WHERE id = ?').get(id));
 }
