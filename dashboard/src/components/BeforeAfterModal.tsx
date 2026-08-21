@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   X, Star, Wand2, Loader2, Columns2, Grid2x2, ChevronLeft, ChevronRight,
   SlidersHorizontal, RefreshCw, Download, History, ShieldCheck, ShieldAlert, Shield,
-  ZoomIn, ZoomOut, Info, Keyboard, Copy, Check, Rows3, Layers, Contrast,
+  ZoomIn, ZoomOut, Info, Keyboard, Copy, Check, Rows3, Layers, Contrast, ArrowLeftRight,
 } from 'lucide-react';
 import type { GeneratedItem, StylePreset } from '../lib/types';
 import { fileUrl, pageThumb } from '../lib/types';
@@ -117,8 +117,9 @@ export default function BeforeAfterModal({
   const [redoBase, setRedoBase] = useState<'original' | 'current'>('original');
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
-  const [showVersions, setShowVersions] = useState(false);
   const [split, setSplit] = useState(50);
+  // what the wipe compares against: the PDF page by default, or any other redesign
+  const [sliderLeft, setSliderLeft] = useState('original');
   const [flip, setFlip] = useState(false);       // A/B blink: show the "después" whole
   const [autoFlip, setAutoFlip] = useState(false);
   const [lens, setLens] = useState<Lens>(NO_LENS);
@@ -207,11 +208,35 @@ export default function BeforeAfterModal({
       : list;
   }, [compare, versions, lostVersions, siblings, hideFailed, item.generated_img]);
 
+  // Everything the current pair can be wiped against: the untouched page, the
+  // other styles of this page, and the other attempts at this same style. The
+  // right-hand side is always the selected pair, so the whole modal — badge,
+  // ficha, rehacer — keeps talking about the same image.
+  const compareChoices = useMemo(() => {
+    const out: { key: string; label: string; src: string }[] = [
+      { key: 'original', label: 'Antes (PDF)', src: item.original_img },
+    ];
+    for (const g of siblings) {
+      if (g.style === item.style) continue;
+      out.push({ key: `s:${g.style}`, label: g.styleName, src: g.generated_img });
+    }
+    for (const v of versions) {
+      const k = `${v.version ?? 1}-${v.generated_img}`;
+      if (lostVersions.has(k) || v.generated_img === item.generated_img) continue;
+      out.push({ key: `v:${k}`, label: `${item.styleName} v${v.version ?? 1}`, src: v.generated_img });
+    }
+    return out;
+  }, [item, siblings, versions, lostVersions]);
+
+  // a choice can vanish when the style changes: fall back to the original
+  const leftSide = compareChoices.find((c) => c.key === sliderLeft) ?? compareChoices[0];
+  const rightLabel = `${item.styleName}${versions.length > 1 ? ` v${item.version ?? 1}` : ''}`;
+
   const failedCount = useMemo(() => siblings.filter((g) => g.qc?.verdict === 'fail').length, [siblings]);
 
   useEffect(() => {
     setWanted([]); setPicker(false); setRedo(false); setRedoBase('original'); setExportMsg(null);
-    setLens(NO_LENS); setFlip(false); setAutoFlip(false);
+    setLens(NO_LENS); setFlip(false); setAutoFlip(false); setSliderLeft('original');
   }, [item.page, item.pdf]);
 
   useEffect(() => { setLens(NO_LENS); }, [item.generated_img]);
@@ -589,10 +614,10 @@ export default function BeforeAfterModal({
         </div>
       </div>
 
-      {/* style tabs */}
-      {siblings.length > 1 && mode !== 'grid' && (
+      {/* style and version tabs */}
+      {(siblings.length > 1 || versions.length > 1) && mode !== 'grid' && (
         <div className={`flex items-center gap-1.5 flex-wrap max-w-[100rem] w-full mx-auto ${chip}`} onClick={(e) => e.stopPropagation()}>
-          {siblings.map((g, i) => {
+          {siblings.length > 1 && siblings.map((g, i) => {
             const active = g.style === item.style;
             return (
               <button
@@ -611,16 +636,68 @@ export default function BeforeAfterModal({
             );
           })}
           {versions.length > 1 && (
+            <span className="ml-auto inline-flex items-center gap-1.5 flex-wrap">
+              <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-widest text-zinc-500">
+                <History size={10} /> Versiones
+              </span>
+              {versions.map((v) => {
+                const key = `${v.version ?? 1}-${v.generated_img}`;
+                const lost = lostVersions.has(key);
+                const active = !lost && v.generated_img === item.generated_img;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => !lost && onSelect(v)}
+                    disabled={lost}
+                    title={lost
+                      ? 'La imagen de esta versión se perdió: una regeneración posterior sobrescribió el archivo'
+                      : [v.superseded ? 'versión antigua' : 'versión actual',
+                         v.feedback ? `corrección: ${v.feedback}` : 'toma inicial'].join(' · ')}
+                    className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] transition-all duration-200 ${
+                      lost
+                        ? 'border-zinc-800 text-zinc-600 line-through cursor-not-allowed'
+                        : active
+                          ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 active:scale-95'
+                          : 'border-zinc-700 text-zinc-400 hover:border-emerald-500/50 hover:text-emerald-400 active:scale-95'
+                    }`}
+                  >
+                    v{v.version ?? 1}
+                    {lost ? <span className="text-zinc-600">sin imagen</span>
+                      : v.superseded ? null : <span className="h-1 w-1 rounded-full bg-emerald-500" />}
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => patch({ mode: 'grid', compare: 'versions' })}
+                title="Ver las versiones en paralelo (V)"
+                className="inline-flex items-center rounded-md border border-zinc-700 px-1.5 py-0.5 text-zinc-400 transition-colors duration-200 hover:border-emerald-500/50 hover:text-emerald-400"
+              >
+                <Grid2x2 size={10} />
+              </button>
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* what the wipe compares against */}
+      {mode === 'slider' && compareChoices.length > 1 && (
+        <div className={`flex items-center gap-1.5 flex-wrap max-w-[100rem] w-full mx-auto ${chip}`} onClick={(e) => e.stopPropagation()}>
+          <span className="text-[10px] uppercase tracking-widest text-zinc-500">Izquierda</span>
+          {compareChoices.map((c) => (
             <button
-              onClick={() => setShowVersions((v) => !v)}
-              title="Versiones anteriores de este estilo (V para verlas en paralelo)"
-              className={`ml-auto inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] transition-all duration-200 active:scale-95 ${
-                showVersions ? on : 'border-zinc-700 text-zinc-400 hover:border-emerald-500/50 hover:text-emerald-400'
+              key={c.key}
+              onClick={() => setSliderLeft(c.key)}
+              title={c.key === 'original' ? 'La página tal cual sale del PDF' : `Comparar ${rightLabel} contra ${c.label}`}
+              className={`rounded-md border px-2 py-0.5 text-[10px] transition-all duration-200 active:scale-95 ${
+                leftSide?.key === c.key ? on : 'border-zinc-700 text-zinc-400 hover:border-emerald-500/50 hover:text-emerald-400'
               }`}
             >
-              <History size={10} /> v{item.version ?? 1}/{versions.length}
+              {c.label}
             </button>
-          )}
+          ))}
+          <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-zinc-500">
+            <ArrowLeftRight size={10} /> derecha <span className="text-emerald-400">{rightLabel}</span>
+          </span>
         </div>
       )}
 
@@ -682,46 +759,6 @@ export default function BeforeAfterModal({
         </div>
       )}
 
-      {/* version history */}
-      {showVersions && versions.length > 1 && mode !== 'grid' && (
-        <div className={`max-w-[100rem] w-full mx-auto flex items-center gap-2 flex-wrap ${chip}`} onClick={(e) => e.stopPropagation()}>
-          <span className="text-[10px] uppercase tracking-widest text-zinc-500">Versiones</span>
-          {versions.map((v) => {
-            const key = `${v.version ?? 1}-${v.generated_img}`;
-            const lost = lostVersions.has(key);
-            const active = !lost && v.generated_img === item.generated_img;
-            return (
-              <button
-                key={key}
-                onClick={() => !lost && onSelect(v)}
-                disabled={lost}
-                title={lost
-                  ? 'La imagen de esta versión se perdió: una regeneración posterior sobrescribió el archivo'
-                  : v.feedback ? `Corrección: ${v.feedback}` : 'versión inicial'}
-                className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] transition-all duration-200 ${
-                  lost
-                    ? 'border-zinc-800 text-zinc-600 line-through cursor-not-allowed'
-                    : active
-                      ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 active:scale-95'
-                      : 'border-zinc-700 text-zinc-400 hover:border-emerald-500/50 hover:text-emerald-400 active:scale-95'
-                }`}
-              >
-                v{v.version ?? 1}
-                {lost
-                  ? <span className="text-zinc-600">sin imagen</span>
-                  : v.superseded ? <span className="text-zinc-600">antigua</span> : <span className="text-emerald-500">actual</span>}
-              </button>
-            );
-          })}
-          <button
-            onClick={() => patch({ mode: 'grid', compare: 'versions' })}
-            className="ml-auto inline-flex items-center gap-1 rounded-md border border-zinc-700 px-2 py-0.5 text-[10px] text-zinc-400 hover:border-emerald-500/50 hover:text-emerald-400"
-          >
-            <Grid2x2 size={10} /> Verlas en paralelo
-          </button>
-        </div>
-      )}
-
       {/* style picker */}
       {picker && (
         <div
@@ -767,8 +804,10 @@ export default function BeforeAfterModal({
       >
         {mode === 'slider' ? (
           <SliderCompare
-            before={item.original_img}
+            before={leftSide?.src ?? item.original_img}
             after={item.generated_img}
+            beforeLabel={leftSide?.label ?? 'Antes'}
+            afterLabel={rightLabel}
             split={flip ? 0 : split}
             onSplit={(n) => { setFlip(false); setAutoFlip(false); setSplit(n); }}
           />
@@ -841,7 +880,7 @@ export default function BeforeAfterModal({
           {mode === 'grid'
             ? 'clic elige · doble clic abre el par · ★ marca el ganador'
             : mode === 'slider'
-              ? 'arrastra o [ ] mueve el corte · ESPACIO parpadea'
+              ? 'elige arriba contra qué comparas · arrastra o [ ] mueve el corte · ESPACIO parpadea'
               : 'rueda amplía · arrastra mueve · ←/→ página · 1-9 estilo'}
           <button onClick={() => setHelp(true)} className="text-zinc-500 hover:text-emerald-400">? atajos</button>
         </span>
@@ -1125,8 +1164,9 @@ function Card({
   );
 }
 
-function SliderCompare({ before, after, split, onSplit }: {
-  before: string; after: string; split: number; onSplit: (n: number) => void;
+function SliderCompare({ before, after, beforeLabel, afterLabel, split, onSplit }: {
+  before: string; after: string; beforeLabel: string; afterLabel: string;
+  split: number; onSplit: (n: number) => void;
 }) {
   const ref = React.useRef<HTMLDivElement>(null);
   // The redesign rarely has the exact aspect of the original render. For the
@@ -1173,8 +1213,8 @@ function SliderCompare({ before, after, split, onSplit }: {
             <SlidersHorizontal size={12} />
           </span>
         </div>
-        <span className="absolute top-2 left-2 rounded bg-black/70 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-zinc-300">Antes</span>
-        <span className="absolute top-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-emerald-400">Después</span>
+        <span className="absolute top-2 left-2 max-w-[45%] truncate rounded bg-black/70 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-zinc-300">{beforeLabel}</span>
+        <span className="absolute top-2 right-2 max-w-[45%] truncate rounded bg-black/70 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-emerald-400">{afterLabel}</span>
       </div>
     </div>
   );

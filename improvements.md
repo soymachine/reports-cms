@@ -34,7 +34,9 @@ marcan y se dejan como registro de decisiones.
     estilo con escala y encaje en una fila, rejilla de versiones en paralelo, lupa
     sincronizada sobre las dos imágenes, parpadeo A/B en el deslizador, fondo
     conmutable, ficha técnica, descarga y copia del PNG, atajos con su chuleta y
-    preferencias recordadas. Las imágenes cargan por miniatura primero y las vecinas
+    preferencias recordadas. Las versiones se eligen siempre desde la barra, sin
+    desplegar nada, y el deslizador compara contra lo que se le diga (el PDF, otro
+    estilo, otra versión) en vez de estar atado al original. Las imágenes cargan por miniatura primero y las vecinas
     se precargan. De paso, escribir en el cuadro de «rehacer» ya no dispara los
     atajos ni cierra el comparador de golpe.
 

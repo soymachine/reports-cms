@@ -69,8 +69,10 @@ rápido.
   los intentos quedó mejor.
 - **Lupa sincronizada**: la rueda amplía y el arrastre mueve las dos imágenes a la
   vez, que es la única forma de comparar si una cifra se lee.
-- **Deslizador** (`S`) con parpadeo A/B: `ESPACIO` alterna antes y después en el
-  mismo rectángulo; `[` y `]` mueven el corte.
+- **Deslizador** (`S`): el lado derecho es siempre el par seleccionado y el izquierdo
+  se elige — la página del PDF, otro estilo u otra versión — así que se puede barrer
+  v3 contra v1 y no solo contra el original. Con parpadeo A/B: `ESPACIO` alterna los
+  dos lados en el mismo rectángulo; `[` y `]` mueven el corte.
 - **Fondo** negro, gris o claro (`F`): una página blanca no se lee igual sobre negro.
 - Ficha técnica (`I`) con modelo, resolución, prompt y control de datos; descarga del
   PNG y copia al portapapeles; `?` lista todos los atajos.
