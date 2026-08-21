@@ -65,6 +65,25 @@ REGLAS (incumplirlas invalida el trabajo):
 """
 
 
+# Goes into every prompt, whatever the style. The original page travels to
+# Magnific as a reference image, and an editing-capable model — Seedream above
+# all — is happy to hand back the same page with tidier edges. A demo that
+# looks like the client's own PDF with a filter on top loses the client, so the
+# brief has to say out loud that keeping the layout is the failure mode.
+REDESIGN_MANDATE = (
+    "TASK: redesign this report page from scratch. The reference image is the SOURCE OF "
+    "CONTENT, never a layout to preserve. This is not a retouch, an upscale, a clean-up, a "
+    "restyle of the existing artwork or a filter: lay the page out again as a different "
+    "design studio would.\n"
+    "MUST CHANGE: composition and grid, page structure and reading order, typographic "
+    "hierarchy and scale, type families, the treatment of charts, tables and figures, colour "
+    "use, backgrounds, and the use of white space.\n"
+    "MUST STAY: the content — every figure, percentage, year and unit exactly as in the "
+    "original, the meaning of every headline, label and caption — and the page proportions.\n"
+    "A result that keeps the original composition is a failure, however clean it looks."
+)
+
+
 def compose_magnific_prompt(style_prompt: str, extra: str, palette: str, feedback: str,
                             refine: bool = False, consistent: bool = False) -> str:
     """The literal prompt handed to Magnific.
@@ -73,12 +92,16 @@ def compose_magnific_prompt(style_prompt: str, extra: str, palette: str, feedbac
     what the agent is told to send. Order matters: corrections outrank the
     team's instructions, which outrank the base style.
     """
-    parts = [
+    parts = []
+    # A refine starts from an approved redesign on purpose: telling it to throw
+    # the layout away would undo the very thing the user asked to keep.
+    if not refine:
+        parts.append(REDESIGN_MANDATE)
+    parts.append(
         "Premium editorial report page redesign, bold modern typography, sophisticated "
         "data visualization, elegant layout, high-end design studio quality, clean grid, "
-        "striking visual hierarchy. Keep every figure, percentage and year exactly as in "
-        "the original page."
-    ]
+        "striking visual hierarchy."
+    )
     if style_prompt.strip():
         parts.append(f"Estilo: {style_prompt.strip()}")
     if palette.strip():
@@ -96,7 +119,8 @@ def compose_magnific_prompt(style_prompt: str, extra: str, palette: str, feedbac
     if consistent:
         parts.append(
             "COHERENCIA DE SERIE (obligatoria): esta página forma parte de un mismo documento. "
-            "Usa EXACTAMENTE el mismo sistema visual que la imagen de referencia de estilo: la "
+            "Usa EXACTAMENTE el mismo sistema visual que la imagen de referencia de estilo — que "
+            "es un rediseño ya hecho, nunca la página original —: la "
             "misma paleta, la misma familia y jerarquía tipográfica, la misma retícula y márgenes, "
             "el mismo tratamiento de gráficos, títulos y pies. Solo cambia el contenido de la "
             "página; el diseño debe parecer del mismo maquetador y del mismo informe."

@@ -42,6 +42,26 @@ El saldo real de la cuenta aparece en la barra lateral.
 Órdenes de magnitud por imagen: Nano Banana 2 a 2k = 75 cr., Nano Banana 2 Lite = 60 cr.,
 Seedream 5 Pro 2k = 100 cr., GPT 2 2k medium = 260 cr. (y 700 cr. en `high`).
 
+## Reinterpretar, nunca retocar
+
+La página original viaja a Magnific como imagen de referencia, y un modelo con
+capacidad de edición —Seedream el primero— devuelve encantado la misma página con
+los bordes más limpios. Un demo que el cliente reconoce como su propio PDF con un
+filtro encima no vende: por eso el encargo de rediseño va en **todos** los prompts,
+sea cual sea el estilo, y dice explícitamente qué debe cambiar (retícula,
+estructura, jerarquía y familias tipográficas, tratamiento de gráficos, color,
+fondos, aire) y qué no (las cifras, el sentido de los textos y la proporción de
+página). La única excepción es «Rehacer partiendo de este rediseño», donde
+conservar la maquetación es justo lo que se ha pedido.
+
+Como el prompt no garantiza nada por sí solo, `scripts/qc_redesign.py` mide además
+la distancia de maquetación entre el original y el rediseño (dHash de 256 bits, que
+sobrevive a un cambio de proporciones). Por debajo de 0.08 es un calco, hasta 0.16
+se ha movido poco, y por encima es un rediseño de verdad; una página casi vacía se
+marca como no medible. El veredicto sale como chip rojo «calco» en la tira antes /
+después y en el comparador, con la distancia exacta en la ficha técnica. Avisa, no
+bloquea: el PDF comparativo solo excluye por el control de cifras.
+
 ## Coherencia entre páginas
 
 Las páginas de un mismo informe se generan como una serie, no sueltas: la primera imagen

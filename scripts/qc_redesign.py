@@ -1,20 +1,26 @@
 #!/usr/bin/env python3
-"""qc_redesign.py — check that a redesign kept the original page's data.
+"""qc_redesign.py — check that a redesign kept the data and changed the design.
 
-Magnific occasionally rewrites or invents figures. The original page has a
-real text layer in the source PDF (or falls back to OCR), the redesign is
-only an image, so it goes through OCR. We compare the *numbers*, which is
-what actually damages credibility when it changes.
+Two failures ruin a demo, and they are opposite:
+
+* Magnific rewrites or invents figures. The original page has a real text layer
+  in the source PDF (or falls back to OCR), the redesign is only an image, so it
+  goes through OCR. We compare the *numbers*, which is what damages credibility.
+* Magnific hands back the same page with tidier edges. Sending a client their own
+  PDF with a filter on top is worse than sending nothing, so the layout distance
+  between the two images is measured too.
 
 Usage:
   python3 qc_redesign.py --original <img|pdf#page> --generated <img> [--pdf path --page N]
-Output: JSON {"ok": true, "verdict": "clean|warning|fail", "missing": [...], "kept": N}
+Output: JSON {"ok": true, "verdict": "clean|warning|fail", "missing": [...], "kept": N,
+              "similarity": {"distance": 0.42, "verdict": "ok|weak|copy|unknown"}}
 """
 from __future__ import annotations
 
 import argparse
 import json
 import re
+import statistics
 import sys
 from pathlib import Path
 
@@ -64,6 +70,70 @@ def numbers_in(text: str) -> set[str]:
     return found
 
 
+# A page laid out again moves nearly every gradient bit; a retouch of the same
+# artwork leaves them where they were. Measured over pairs built on purpose: a
+# recolour or a taller header stays under 0.01, a new grid lands above 0.20. The
+# band in between is a redesign that barely tried, and that is worth saying too.
+COPY_DISTANCE = 0.08
+WEAK_DISTANCE = 0.16
+FLAT_PAGE_STD = 10          # below this there is no structure worth comparing
+
+
+def fingerprint(path: Path, size: int = 16) -> list[int]:
+    """A dHash of the page: which way the brightness steps, cell by cell.
+
+    Layout, not colour: a page laid out again on another grid moves nearly every
+    bit, while a retouch of the same artwork leaves them where they were. It also
+    survives a change of proportions, since both sides are squashed to one grid.
+    """
+    from PIL import Image
+
+    with Image.open(path) as im:
+        im = im.convert("L").resize((size + 1, size), Image.LANCZOS)
+        px = im.tobytes()               # one grey byte per pixel, row by row
+    bits: list[int] = []
+    for y in range(size):
+        row = px[y * (size + 1):(y + 1) * (size + 1)]
+        bits.extend(1 if row[x] > row[x + 1] else 0 for x in range(size))
+    return bits
+
+
+def page_structure(path: Path, size: int = 64) -> float:
+    """How much there is on the page at all: an empty one tells us nothing."""
+    from PIL import Image
+
+    with Image.open(path) as im:
+        px = im.convert("L").resize((size, size), Image.LANCZOS).tobytes()
+    return statistics.pstdev(px)
+
+
+def compare_layout(original: Path, generated: Path) -> dict | None:
+    """How far the redesign moved from the page it came from. None if unreadable."""
+    try:
+        a, b = fingerprint(original), fingerprint(generated)
+        structure = max(page_structure(original), page_structure(generated))
+    except Exception:
+        return None
+    if not a or len(a) != len(b):
+        return None
+    distance = sum(1 for x, y in zip(a, b) if x != y) / len(a)
+    if structure < FLAT_PAGE_STD:
+        verdict = "unknown"     # a near-blank page moves few bits whatever you do
+    elif distance <= COPY_DISTANCE:
+        verdict = "copy"
+    elif distance <= WEAK_DISTANCE:
+        verdict = "weak"
+    else:
+        verdict = "ok"
+    return {
+        "distance": round(distance, 3),
+        "verdict": verdict,
+        "too_similar": verdict == "copy",
+        "copy_threshold": COPY_DISTANCE,
+        "weak_threshold": WEAK_DISTANCE,
+    }
+
+
 def ocr_image(path: Path, lang: str = "eng") -> str:
     import pytesseract
     from PIL import Image
@@ -99,6 +169,10 @@ def main() -> int:
         print(json.dumps({"ok": False, "error": "imagen generada no encontrada"}))
         return 1
 
+    # measured before the OCR: it is worth reporting even when the text check
+    # cannot run, and it needs no tesseract
+    similarity = compare_layout(ROOT / a.original, gen_path)
+
     # original: prefer the real text layer, fall back to OCR of the render
     original_text = ""
     if a.pdf and a.page:
@@ -109,7 +183,8 @@ def main() -> int:
             try:
                 original_text = ocr_image(orig_path, a.lang)
             except Exception as e:
-                print(json.dumps({"ok": False, "error": f"OCR del original falló: {e}"}))
+                print(json.dumps({"ok": False, "error": f"OCR del original falló: {e}",
+                                  "similarity": similarity}))
                 return 1
 
     try:
@@ -143,6 +218,7 @@ def main() -> int:
         "total_original": len(before),
         "missing": missing[:25],
         "invented": invented[:25],
+        "similarity": similarity,
     }, ensure_ascii=False))
     return 0
 

@@ -51,6 +51,16 @@ marcan y se dejan como registro de decisiones.
     abrirse (búsqueda o generación), y la búsqueda registra su pid para que el
     barrido de arranque no la dé por muerta al reiniciar el dashboard.
 
+14. **Rediseño obligatorio en el prompt** — con seedream-5-pro a 1.5k, 3 de 4 páginas
+    volvieron prácticamente idénticas al original: el prompt describía el resultado
+    deseado y pedía conservar las cifras, pero en ningún sitio decía que la maquetación
+    del original NO se conserva. Ahora todo prompt (menos el de refinar sobre un
+    rediseño aprobado) abre con el encargo explícito: la referencia es contenido, no
+    diseño; lista lo que debe cambiar y lo que no; y declara que conservar la
+    composición es un fallo. Además el control de calidad mide la distancia de
+    maquetación y marca los calcos en la interfaz, que era la parte que hasta ahora
+    dependía del ojo de quien mirase.
+
 ## Aplazadas (decisión del 19/08/2026)
 
 ### 4. Cerrar el bucle comercial: enviar y seguir

@@ -610,6 +610,20 @@ function PdfGallery({
                     {g.qc?.ok && (g.qc.verdict === 'warning' || g.qc.verdict === 'fail') && (
                       <ShieldAlert size={10} className={g.qc.verdict === 'fail' ? 'text-rose-500' : 'text-amber-500'} />
                     )}
+                    {(g.qc?.similarity?.verdict === 'copy' || g.qc?.similarity?.verdict === 'weak') && (
+                      <span
+                        title={g.qc.similarity.verdict === 'copy'
+                          ? `Conserva la maquetación del original (distancia ${g.qc.similarity.distance}): no sirve como demo`
+                          : `Se aleja poco del original (distancia ${g.qc.similarity.distance})`}
+                        className={`inline-flex items-center gap-0.5 rounded border px-1 py-px text-[9px] leading-none ${
+                          g.qc.similarity.verdict === 'copy'
+                            ? 'border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                            : 'border-amber-500/50 text-amber-600 dark:text-amber-400'
+                        }`}
+                      >
+                        <Copy size={8} /> {g.qc.similarity.verdict === 'copy' ? 'calco' : 'flojo'}
+                      </span>
+                    )}
                   </span>
 
                   {vers.length > 1 && (

@@ -46,6 +46,21 @@ export interface QcResult {
   missing?: string[];
   invented?: string[];
   error?: string;
+  /** how far the redesign moved from the page it came from (scripts/qc_redesign.py) */
+  similarity?: LayoutSimilarity | null;
+}
+
+/**
+ * The other way a demo dies: Magnific hands back the same page with tidier
+ * edges. `distance` is 0 for an identical layout and above ~0.2 for a page
+ * genuinely laid out again.
+ */
+export interface LayoutSimilarity {
+  distance: number;
+  verdict: 'ok' | 'weak' | 'copy' | 'unknown';
+  too_similar?: boolean;
+  copy_threshold?: number;
+  weak_threshold?: number;
 }
 
 export interface PaletteColor {

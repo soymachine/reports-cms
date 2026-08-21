@@ -441,6 +441,7 @@ export default function BeforeAfterModal({
             </span>
           )}
           <QcBadge qc={item.qc} />
+          <CopyBadge qc={item.qc} />
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
@@ -901,6 +902,11 @@ function InfoPanel({ item }: { item: GeneratedItem }) {
     ['Creada', item.created_at ?? '—'],
     ['Base', item.base_img ? 'un rediseño anterior' : 'la página del PDF'],
     ['Paleta', item.palette || '—'],
+    ['Distancia al original', item.qc?.similarity
+      ? `${item.qc.similarity.distance} · ${
+          { copy: 'calco', weak: 'cambia poco', ok: 'rediseñada', unknown: 'sin medir' }[item.qc.similarity.verdict]
+        }`
+      : '—'],
   ];
   const texts: [string, string | undefined][] = [
     ['Prompt de estilo', item.style_prompt],
@@ -1011,6 +1017,39 @@ function QcBadge({ qc }: { qc: GeneratedItem['qc'] }) {
   );
 }
 
+/**
+ * The demo-killer: a "redesign" that is the client's own page with tidier
+ * edges. Loud on purpose — it is worse to send than nothing.
+ */
+function CopyBadge({ qc }: { qc: GeneratedItem['qc'] }) {
+  const s = qc?.similarity;
+  if (!s || (s.verdict !== 'copy' && s.verdict !== 'weak')) return null;
+  const copy = s.verdict === 'copy';
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] ${
+        copy ? 'border-rose-500 bg-rose-500/15 text-rose-400' : 'border-amber-500/50 text-amber-400'
+      }`}
+      title={copy
+        ? `Conserva la maquetación del original (distancia ${s.distance}). Rehazlo: un cliente que reconoce su propia página no contrata.`
+        : `Se aleja poco del original (distancia ${s.distance}). Merece otra pasada.`}
+    >
+      <Copy size={9} /> {copy ? 'calco del original' : 'cambia poco'}
+    </span>
+  );
+}
+
+function CopyDot({ qc }: { qc: GeneratedItem['qc'] }) {
+  const s = qc?.similarity;
+  if (!s || (s.verdict !== 'copy' && s.verdict !== 'weak')) return null;
+  return (
+    <Copy
+      size={10}
+      className={`${s.verdict === 'copy' ? 'text-rose-500' : 'text-amber-500'} shrink-0`}
+    />
+  );
+}
+
 function QcDot({ qc }: { qc: GeneratedItem['qc'] }) {
   if (!qc?.ok) return null;
   const cls = qc.verdict === 'clean' ? 'text-emerald-500'
@@ -1073,6 +1112,7 @@ function Pane({
         <span className={`inline-flex items-center gap-1.5 rounded bg-black/50 px-1.5 py-0.5 text-[10px] uppercase tracking-widest truncate ${tone}`}>
           {label}
           <QcDot qc={qc} />
+          <CopyDot qc={qc} />
           {onHero && (
             <button
               onClick={onHero}
@@ -1142,6 +1182,7 @@ function Card({
           {index != null && <span className="text-zinc-600">{index}</span>}
           {title}
           <QcDot qc={qc} />
+          <CopyDot qc={qc} />
           {onHero && (
             <button
               onClick={(e) => { e.stopPropagation(); onHero(); }}
