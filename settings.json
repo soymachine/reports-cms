@@ -20,72 +20,72 @@
       {
         "id": "editorial",
         "name": "Editorial Premium",
-        "prompt": "editorial premium, tipografía serif moderna, mucho espacio en blanco, paleta sobria con un color de acento"
+        "prompt": "premium editorial, modern serif typography, generous white space, restrained palette with a single accent colour"
       },
       {
         "id": "swiss",
         "name": "Swiss / Internacional",
-        "prompt": "swiss design, grid estricto, helvética, rojo/negro/blanco, composición asimétrica"
+        "prompt": "swiss design, strict grid, Helvetica, red/black/white, asymmetric composition"
       },
       {
         "id": "dark-data",
         "name": "Dark Data Viz",
-        "prompt": "fondo oscuro, visualización de datos luminosa, acentos neón sutiles, estilo dashboard premium"
+        "prompt": "dark background, luminous data visualization, subtle neon accents, premium dashboard feel"
       },
       {
         "id": "brutalist",
         "name": "Brutalist",
-        "prompt": "brutalism, tipografía enorme, bordes duros, alto contraste, sin sombras"
+        "prompt": "brutalism, oversized typography, hard edges, high contrast, no shadows"
       },
       {
         "id": "consultancy",
         "name": "Consultoría Corporativa",
-        "prompt": "informe de consultora tier-1 tipo McKinsey/BCG, azul marino y gris, gráficos limpios con etiquetas claras, jerarquía de titulares con kicker, densidad de datos alta pero ordenada"
+        "prompt": "tier-1 consultancy report in the McKinsey/BCG mould, navy and grey, clean charts with clear labels, headline hierarchy with a kicker, high but orderly data density"
       },
       {
         "id": "annual-report",
         "name": "Memoria Anual",
-        "prompt": "memoria anual corporativa, portada con imagen a sangre, cifras destacadas a gran tamaño, retícula de dos columnas, papel crema, elegancia sobria"
+        "prompt": "corporate annual report, full-bleed cover image, headline figures set large, two-column grid, cream paper, understated elegance"
       },
       {
         "id": "infographic",
         "name": "Infografía Visual",
-        "prompt": "estilo infográfico, iconografía lineal consistente, diagramas de flujo y mapas de datos, paleta de 3 colores, texto reducido a lo esencial"
+        "prompt": "infographic style, consistent line iconography, flow diagrams and data maps, three-colour palette, text pared back to the essentials"
       },
       {
         "id": "scientific",
         "name": "Científico / Académico",
-        "prompt": "rigor científico, tablas y gráficos precisos con notas al pie, tipografía serif de lectura larga, figuras numeradas, paleta neutra con acento frío"
+        "prompt": "scientific rigour, precise tables and charts with footnotes, serif typography for long reading, numbered figures, neutral palette with a cool accent"
       },
       {
         "id": "magazine",
         "name": "Revista / Feature",
-        "prompt": "maquetación de revista, titular tipográfico dramático, entradilla en capitular, columnas de texto con imágenes envolventes, mucho contraste de escala"
+        "prompt": "magazine layout, dramatic typographic headline, drop-cap standfirst, text columns with images wrapped around them, strong contrast of scale"
       },
       {
         "id": "sustainability",
         "name": "Sostenibilidad / ESG",
-        "prompt": "informe ESG, verdes naturales y tonos tierra, iconografía orgánica, fotografía de naturaleza integrada, indicadores de impacto destacados"
+        "prompt": "ESG report, natural greens and earth tones, organic iconography, integrated nature photography, impact indicators given prominence"
       },
       {
         "id": "fintech",
         "name": "Fintech / Financiero",
-        "prompt": "informe financiero moderno, tablas de datos nítidas, gráficos de series temporales, azul profundo y verde menta, tipografía sans geométrica, aire generoso"
+        "prompt": "modern financial report, crisp data tables, time-series charts, deep blue and mint green, geometric sans typography, generous breathing room"
       },
       {
         "id": "tech-startup",
         "name": "Tech / Producto",
-        "prompt": "estilo producto tecnológico, gradientes sutiles, tarjetas con bordes redondeados, tipografía sans moderna, capturas de interfaz integradas, aspecto de deck de startup"
+        "prompt": "tech product style, subtle gradients, rounded cards, modern sans typography, integrated interface screenshots, startup deck feel"
       },
       {
         "id": "minimal-mono",
         "name": "Minimal Monocromo",
-        "prompt": "monocromo estricto, blanco y negro, tipografía de un solo peso variando escala, líneas finas como único ornamento, silencio visual"
+        "prompt": "strict monochrome, black and white, a single type weight varying only in scale, hairlines as the only ornament, visual silence"
       },
       {
         "id": "govt-policy",
         "name": "Institucional / Policy",
-        "prompt": "documento institucional de política pública, sobriedad formal, azul institucional, sumario ejecutivo destacado, cajas de recomendaciones, jerarquía numerada"
+        "prompt": "public policy institutional document, formal restraint, institutional blue, prominent executive summary, recommendation boxes, numbered hierarchy"
       }
     ]
   },
