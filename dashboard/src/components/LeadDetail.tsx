@@ -3,12 +3,13 @@ import {
   X, Globe, Linkedin, Mail, FileText, Loader2, Download, Images, Wand2,
   Copy, Save, ExternalLink, Check, ChevronLeft, ChevronRight, Trash2, FolderOpen,
   Star, Gauge, Sparkles, ArrowUp, ArrowDown, ArrowUpDown, FileDown, Palette, Coins, Eye, ListChecks,
-  ShieldAlert,
+  ShieldAlert, ShieldCheck, Maximize2, Rows3,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import BeforeAfterModal from './BeforeAfterModal';
 import type { Lead, PageThumb, StylePreset, GeneratedItem, PdfItem, PaletteColor, MagnificModel, ModelCatalogResponse } from '../lib/types';
-import { fileUrl, fmtDate, decodeHtml, creditsPerImage } from '../lib/types';
+import { fileUrl, fmtDate, decodeHtml, creditsPerImage, pageThumb } from '../lib/types';
+import SmartImg from './SmartImg';
 import { Badge, priorityVariant } from './ui/badge';
 
 interface Props {
@@ -22,6 +23,13 @@ interface Props {
   /** set when the lead is opened from the gallery: report (and style) to unfold */
   focusPdf?: { pdf: string; style?: string; key: number } | null;
 }
+
+/* How big the before/after pairs are drawn in the lead's own strip. "row" packs
+   every pair of the report into a single line, however many there are. */
+type PairSize = 'l' | 'm' | 's' | 'row';
+const PAIR_SIZE_KEY = 'thinkthings.pairsize.v1';
+const PAIR_COLS: Record<Exclude<PairSize, 'row'>, number> = { l: 2, m: 3, s: 4 };
+const PAIR_SIZE_LABEL: Record<PairSize, string> = { l: '100 %', m: '75 %', s: '50 %', row: 'Una fila' };
 
 const inputCls =
   'w-full rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 transition-all duration-200 hover:border-emerald-500/50 focus:border-emerald-500 focus:outline-none';
@@ -198,6 +206,19 @@ function PdfGallery({
   const [chosen, setChosen] = React.useState<string[]>([]);
   // the data check blocks the deck by default; overriding is a deliberate act
   const [allowFailedQc, setAllowFailedQc] = React.useState(false);
+
+  // how large the pairs are drawn, remembered across sessions
+  const [pairSize, setPairSize] = React.useState<PairSize>('l');
+  React.useEffect(() => {
+    try {
+      const v = localStorage.getItem(PAIR_SIZE_KEY) as PairSize | null;
+      if (v && (v === 'row' || v in PAIR_COLS)) setPairSize(v);
+    } catch { /* private window: the default is fine */ }
+  }, []);
+  const changePairSize = (v: PairSize) => {
+    setPairSize(v);
+    try { localStorage.setItem(PAIR_SIZE_KEY, v); } catch { /* idem */ }
+  };
 
   // every redesign of this report, older versions too, grouped by page
   const candidates = React.useMemo(() => {
@@ -477,12 +498,37 @@ function PdfGallery({
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+          <div className="mt-2 flex items-center justify-end gap-1.5">
+            <span className="text-[10px] text-zinc-500">Tamaño de los pares</span>
+            <span className="inline-flex items-center rounded-md border border-zinc-300 dark:border-zinc-700 overflow-hidden">
+              {(['l', 'm', 's', 'row'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => changePairSize(v)}
+                  title={v === 'row'
+                    ? `Encoger hasta que los ${pairs.length} pares quepan en una sola fila`
+                    : `Pares a ${PAIR_SIZE_LABEL[v]} — ${PAIR_COLS[v]} por fila`}
+                  className={`px-1.5 py-1 text-[10px] inline-flex items-center transition-colors duration-200 ${
+                    pairSize === v
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      : 'text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400'
+                  }`}
+                >
+                  {v === 'row' ? <Rows3 size={11} /> : PAIR_SIZE_LABEL[v]}
+                </button>
+              ))}
+            </span>
+          </div>
+
+          <div
+            className="grid gap-2 mt-1.5"
+            style={{ gridTemplateColumns: `repeat(${pairSize === 'row' ? Math.max(1, pairs.length) : PAIR_COLS[pairSize]}, minmax(0, 1fr))` }}
+          >
             {pairs.map((g) => (
-              <div key={g.page} className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/30 p-2">
+              <div key={g.page} className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/30 p-2 min-w-0">
                 <div className="text-[10px] text-zinc-500 mb-1 flex items-center justify-between gap-1">
-                  <span className="inline-flex items-center gap-1">
-                    Página {g.page}
+                  <span className="inline-flex items-center gap-1 shrink-0">
+                    p{g.page}
                     <button
                       onClick={() => onHero(g)}
                       title={g.hero ? 'Quitar como ganador' : 'Marcar como ganador de esta página'}
@@ -492,19 +538,38 @@ function PdfGallery({
                     >
                       <Star size={11} fill={g.hero ? 'currentColor' : 'none'} />
                     </button>
+                    {g.qc?.ok && g.qc.verdict === 'clean' && (
+                      <ShieldCheck size={10} className="text-emerald-500" />
+                    )}
+                    {g.qc?.ok && (g.qc.verdict === 'warning' || g.qc.verdict === 'fail') && (
+                      <ShieldAlert size={10} className={g.qc.verdict === 'fail' ? 'text-rose-500' : 'text-amber-500'} />
+                    )}
                   </span>
                   <span className="text-emerald-500 truncate" title={g.extra_prompt ? `Indicaciones: ${g.extra_prompt}` : g.style_prompt}>
                     {g.styleName}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => onPreview(g)} className="text-left cursor-zoom-in group/ba">
+                  <button onClick={() => onPreview(g)} title="Abrir el comparador a pantalla completa" className="relative text-left cursor-zoom-in group/ba">
                     <div className="text-[9px] uppercase tracking-widest text-zinc-500 mb-1">Antes</div>
-                    <img src={fileUrl(g.original_img)} alt={`antes p${g.page}`} className="w-full rounded-md border border-zinc-200 dark:border-zinc-800 transition-all duration-200 group-hover/ba:scale-[1.01] group-hover/ba:shadow-md group-hover/ba:border-zinc-400 dark:group-hover/ba:border-zinc-600" />
+                    <SmartImg
+                      src={g.original_img}
+                      thumb={pageThumb(g.original_img)}
+                      alt={`antes p${g.page}`}
+                      className="w-full rounded-md border border-zinc-200 dark:border-zinc-800 transition-all duration-200 group-hover/ba:scale-[1.01] group-hover/ba:shadow-md group-hover/ba:border-zinc-400 dark:group-hover/ba:border-zinc-600"
+                    />
                   </button>
-                  <button onClick={() => onPreview(g)} className="text-left cursor-zoom-in group/ba">
+                  <button onClick={() => onPreview(g)} title="Abrir el comparador a pantalla completa" className="relative text-left cursor-zoom-in group/ba">
                     <div className="text-[9px] uppercase tracking-widest text-emerald-500 mb-1">Después</div>
-                    <img src={fileUrl(g.thumb || g.generated_img)} alt={`después p${g.page}`} loading="lazy" className="w-full rounded-md border border-emerald-500/30 transition-all duration-200 group-hover/ba:scale-[1.01] group-hover/ba:shadow-md group-hover/ba:border-emerald-500/70" />
+                    <SmartImg
+                      src={g.generated_img}
+                      thumb={g.thumb}
+                      alt={`después p${g.page}`}
+                      className="w-full rounded-md border border-emerald-500/30 transition-all duration-200 group-hover/ba:scale-[1.01] group-hover/ba:shadow-md group-hover/ba:border-emerald-500/70"
+                    />
+                    <span className="absolute bottom-1 left-1 rounded bg-black/60 p-1 text-white opacity-0 transition-opacity duration-200 group-hover/ba:opacity-100">
+                      <Maximize2 size={10} />
+                    </span>
                   </button>
                 </div>
               </div>

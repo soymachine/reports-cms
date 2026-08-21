@@ -212,6 +212,15 @@ export function decodeHtml(input: string | null | undefined): string {
     .replace(/&gt;/g, '>');
 }
 
+/**
+ * Page renders are always written next to a small sibling by render_pages.py:
+ * `.../full-3.png` has `.../thumb-3.png`. Used as the instant placeholder.
+ */
+export function pageThumb(relativePath: string | null | undefined): string | null {
+  const m = String(relativePath ?? '').match(/^(.*)\/full-(\d+)\.png$/);
+  return m ? `${m[1]}/thumb-${m[2]}.png` : null;
+}
+
 export function fileUrl(relativePath: string): string {
   return `/api/file?path=${encodeURIComponent(relativePath)}`;
 }

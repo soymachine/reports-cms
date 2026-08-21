@@ -26,6 +26,18 @@ marcan y se dejan como registro de decisiones.
 10. **Acceso y tests** — token opcional (`DASHBOARD_TOKEN`), `tests/test_pipeline.py` y
     `tests/smoke_api.sh`.
 
+## Hechas (21/08/2026)
+
+12. **Comparador antes / después** — la parte crítica: es donde se decide qué estilo
+    y qué versión salen a un cliente. El panel del lead gana un control de tamaño de
+    los pares (100 / 75 / 50 % y «una fila»); el comparador gana rejilla de pares por
+    estilo con escala y encaje en una fila, rejilla de versiones en paralelo, lupa
+    sincronizada sobre las dos imágenes, parpadeo A/B en el deslizador, fondo
+    conmutable, ficha técnica, descarga y copia del PNG, atajos con su chuleta y
+    preferencias recordadas. Las imágenes cargan por miniatura primero y las vecinas
+    se precargan. De paso, escribir en el cuadro de «rehacer» ya no dispara los
+    atajos ni cierra el comparador de golpe.
+
 ## Aplazadas (decisión del 19/08/2026)
 
 ### 4. Cerrar el bucle comercial: enviar y seguir

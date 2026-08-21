@@ -54,6 +54,31 @@ Se controla con la casilla "mismo diseño en todas" del panel de generación, o 
 `--no-consistency` / `--style-anchor <ruta>` en el script. La referencia de estilo no
 cuesta créditos extra (verificado con `simulate_cost`).
 
+## Comparador antes / después
+
+Es donde se decide qué estilo entra en el email, así que tanto el panel del lead
+como el comparador a pantalla completa están hechos para mirar mucho y decidir
+rápido.
+
+- **Tamaño de los pares** en el panel del lead: 100 %, 75 %, 50 % o «una fila»,
+  que encoge las parejas hasta que todas las páginas del report caben de un vistazo.
+- **Rejilla** en el comparador (`G`): una tarjeta por estilo, cada una con su propio
+  antes y después. La escala se ajusta a mano, al 50 % o con «una fila», que calcula
+  el tamaño máximo con el que entran todas sin bajar la vista.
+- **Versiones** (`V`): las tomas de un mismo estilo en paralelo, para elegir cuál de
+  los intentos quedó mejor.
+- **Lupa sincronizada**: la rueda amplía y el arrastre mueve las dos imágenes a la
+  vez, que es la única forma de comparar si una cifra se lee.
+- **Deslizador** (`S`) con parpadeo A/B: `ESPACIO` alterna antes y después en el
+  mismo rectángulo; `[` y `]` mueven el corte.
+- **Fondo** negro, gris o claro (`F`): una página blanca no se lee igual sobre negro.
+- Ficha técnica (`I`) con modelo, resolución, prompt y control de datos; descarga del
+  PNG y copia al portapapeles; `?` lista todos los atajos.
+
+Las imágenes entran por su miniatura y se sustituyen por el PNG completo al llegar,
+y los estilos y páginas vecinos se precargan, para que moverse no cueste esperas.
+Las preferencias de vista (modo, escala, fondo) se recuerdan entre sesiones.
+
 ## Trabajos en cola
 
 Las generaciones ya no se lanzan desde la petición HTTP: entran en una cola con tope de
