@@ -898,9 +898,11 @@ function InfoPanel({ item }: { item: GeneratedItem }) {
   const rows: [string, string][] = [
     ['Estilo', item.styleName || item.style],
     ['Versión', `v${item.version ?? 1}${item.superseded ? ' (antigua)' : ''}`],
+    ['Origen', item.source === 'manual' ? 'subido a mano' : 'Magnific'],
     ['Modelo', [item.model, item.resolution, item.quality].filter(Boolean).join(' · ') || '—'],
     ['Creada', item.created_at ?? '—'],
-    ['Base', item.base_img ? 'un rediseño anterior' : 'la página del PDF'],
+    ['Base', item.source === 'manual' ? 'trabajo del estudio'
+      : item.base_img ? 'un rediseño anterior' : 'la página del PDF'],
     ['Paleta', item.palette || '—'],
     ['Distancia al original', item.qc?.similarity
       ? `${item.qc.similarity.distance} · ${

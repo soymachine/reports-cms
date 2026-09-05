@@ -61,6 +61,16 @@ marcan y se dejan como registro de decisiones.
     maquetación y marca los calcos en la interfaz, que era la parte que hasta ahora
     dependía del ojo de quien mirase.
 
+15. **Pares antes/después hechos a mano** — el estudio rehace páginas por su
+    cuenta y necesitaba meterlas en el circuito sin perder el PDF comparativo.
+    Dos campos por report (originales y nuevas), emparejado por nombre de archivo
+    con la pareja a la vista antes de subir, número de página editable y borrado
+    de lo ya subido. Entran como entradas normales de `generated` con
+    `source: "manual"`, así que reaprovechan tal cual el panel Antes / Después, el
+    comparador, los ganadores, el control de calidad, el deck ES/EN y el email.
+    De paso, `qc_redesign.py` ya no revienta cuando el PDF de origen no está en
+    disco: devolvía un traceback en vez de JSON y dejaba al que llama sin nada.
+
 ## Aplazadas (decisión del 19/08/2026)
 
 ### 4. Cerrar el bucle comercial: enviar y seguir

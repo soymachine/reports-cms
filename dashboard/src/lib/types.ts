@@ -32,6 +32,8 @@ export interface GeneratedItem {
   base_img?: string | null;
   job_id?: number | null;
   hero?: boolean;
+  /** "manual" when a designer uploaded the pair instead of generating it */
+  source?: 'magnific' | 'manual' | string;
   version?: number;
   superseded?: boolean;
   qc?: QcResult | null;

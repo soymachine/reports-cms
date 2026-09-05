@@ -149,10 +149,19 @@ def ocr_image(path: Path, lang: str = "eng") -> str:
 
 
 def text_from_pdf_page(pdf: Path, page: int) -> str:
-    with pymupdf.open(pdf) as doc:
-        if page < 1 or page > doc.page_count:
-            return ""
-        return doc[page - 1].get_text("text") or ""
+    """The source text layer, or nothing at all: the caller falls back to OCR.
+
+    The row can outlive the file — a report deleted from disk keeping its
+    redesigns, a pair uploaded by hand for a report nobody downloaded — and a
+    traceback here would leave the caller with no JSON to read.
+    """
+    try:
+        with pymupdf.open(pdf) as doc:
+            if page < 1 or page > doc.page_count:
+                return ""
+            return doc[page - 1].get_text("text") or ""
+    except Exception:
+        return ""
 
 
 def main() -> int:

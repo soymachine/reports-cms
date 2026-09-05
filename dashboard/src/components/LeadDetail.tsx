@@ -3,10 +3,11 @@ import {
   X, Globe, Linkedin, Mail, FileText, Loader2, Download, Images, Wand2,
   Copy, Save, ExternalLink, Check, ChevronLeft, ChevronRight, Trash2, FolderOpen,
   Star, Gauge, Sparkles, ArrowUp, ArrowDown, ArrowUpDown, FileDown, Palette, Coins, Eye, ListChecks,
-  ShieldAlert, ShieldCheck, Maximize2, Rows3, History,
+  ShieldAlert, ShieldCheck, Maximize2, Rows3, History, ImagePlus,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import BeforeAfterModal from './BeforeAfterModal';
+import ManualPairs from './ManualPairs';
 import type { Lead, PageThumb, StylePreset, GeneratedItem, PdfItem, PaletteColor, MagnificModel, ModelCatalogResponse, Job } from '../lib/types';
 import { fileUrl, fmtDate, decodeHtml, creditsPerImage, pageThumb } from '../lib/types';
 import SmartImg from './SmartImg';
@@ -776,6 +777,8 @@ export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses,
   const [generating, setGenerating] = useState(false);
   const [genMsg, setGenMsg] = useState<string | null>(null);
 
+  // which report has the "pairs made by hand" panel open
+  const [manualFor, setManualFor] = useState<string | null>(null);
   const [draft, setDraft] = useState(lead.email_draft ?? '');
   const [draftOpen, setDraftOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -1594,6 +1597,17 @@ export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses,
                             <Trash2 size={12} />
                           </button>
                           <button
+                            onClick={() => setManualFor(manualFor === p.slug ? null : p.slug)}
+                            title="Subir pares antes / después hechos a mano para este report"
+                            className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] transition-all duration-200 active:scale-95 ${
+                              manualFor === p.slug
+                                ? 'border-sky-500 bg-sky-500/10 text-sky-600 dark:text-sky-400'
+                                : 'border-zinc-300 dark:border-zinc-700 text-zinc-500 hover:border-sky-500/60 hover:text-sky-600 dark:hover:text-sky-400'
+                            }`}
+                          >
+                            <ImagePlus size={11} /> Pares a mano
+                          </button>
+                          <button
                             onClick={() => activePdf === p.file ? (setActivePdf(null), setPages([])) : renderPages(p.file)}
                             disabled={rendering}
                             className={btnGhost}
@@ -1865,6 +1879,17 @@ export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses,
                             </div>
                           )}
                         </div>
+                      )}
+
+                      {manualFor === p.slug && (
+                        <ManualPairs
+                          leadId={lead.id}
+                          pdfSlug={p.slug}
+                          pdfTitle={decodeHtml(p.title) || p.file}
+                          existing={lead.generated.filter((g) => g.pdf === p.slug && g.source === 'manual')}
+                          onUploaded={(fresh) => onPatch(lead.id, { generated: fresh.generated })}
+                          onClose={() => setManualFor(null)}
+                        />
                       )}
 
                       <PdfGallery

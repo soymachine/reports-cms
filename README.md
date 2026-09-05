@@ -42,6 +42,30 @@ El saldo real de la cuenta aparece en la barra lateral.
 Órdenes de magnitud por imagen: Nano Banana 2 a 2k = 75 cr., Nano Banana 2 Lite = 60 cr.,
 Seedream 5 Pro 2k = 100 cr., GPT 2 2k medium = 260 cr. (y 700 cr. en `high`).
 
+## Pares hechos a mano
+
+No todo rediseño sale de Magnific: a veces el estudio extrae las páginas del PDF
+y las rehace a mano. El botón **Pares a mano** de cada report abre dos campos —
+imágenes originales e imágenes nuevas — y sube las parejas al mismo sitio donde
+viven los rediseños generados.
+
+No hay una segunda tubería: las parejas entran como entradas normales de
+`generated` con `source: "manual"`, así que el panel Antes / Después las trata
+como un estilo más, el comparador las abre, se pueden marcar como ganadoras y el
+PDF comparativo y el email salen igual que siempre.
+
+- Se emparejan **por orden de nombre de archivo**, no por el orden en que las
+  devuelve el diálogo del sistema, y la pareja se ve antes de subir nada: cruzar
+  el antes de una página con el después de otra es el error que no puede pasar
+  callado.
+- El número de página se escribe a mano — sale impreso en el PDF comparativo.
+- El nombre del estilo agrupa la tanda; volver a subir la misma página con el
+  mismo nombre crea una versión nueva y jubila la anterior, igual que rehacer.
+- Cada par pasa el mismo control que los generados: cifras conservadas y
+  distancia de maquetación.
+- Se borran desde el mismo panel, con sus dos imágenes. Solo se pueden borrar los
+  subidos a mano.
+
 ## Reinterpretar, nunca retocar
 
 La página original viaja a Magnific como imagen de referencia, y un modelo con
