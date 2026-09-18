@@ -103,7 +103,6 @@ STRINGS = {
         "cover_title": "Antes / Después",
         "subtitle": "{n} página(s) de vuestro informe, reinterpretadas por {studio}.",
         "note": "Los datos son 100 % los de vuestro informe — sólo ha cambiado el diseño.",
-        "styles": "Estilos: {list}",
         "page": "Página {n}",
         "tag": "ANTES / DESPUÉS",
         "cap_before": "Original — página {n}",
@@ -137,7 +136,6 @@ STRINGS = {
         "cover_title": "Before / After",
         "subtitle": "{n} page(s) from your report, reimagined by {studio}.",
         "note": "The data is 100% yours — only the design has changed.",
-        "styles": "Styles: {list}",
         "page": "Page {n}",
         "tag": "BEFORE / AFTER",
         "cap_before": "Original — page {n}",
@@ -406,7 +404,13 @@ def headline(page, text: str, x: float, y: float, width: float, size: float,
     return y
 
 
-def cover(doc, lead: sqlite3.Row, spreads: int, styles: list[str]) -> None:
+def cover(doc, lead: sqlite3.Row, spreads: int) -> None:
+    """Portada: quién es el cliente y qué tiene delante.
+
+    Deliberadamente no dice con qué estilo se hizo el rediseño. Es una decisión
+    nuestra de taller y al cliente no le aporta nada saber que su informe salió
+    del preset "Revista / Feature".
+    """
     b = branding()
     page = paper(doc)
 
@@ -426,8 +430,6 @@ def cover(doc, lead: sqlite3.Row, spreads: int, styles: list[str]) -> None:
     meta = [m for m in (lead["sector"], lead["country"]) if m]
     if meta:
         tracked(page, (MARGIN, y + 18), " · ".join(str(m) for m in meta).upper(), size=8)
-    if styles:
-        tracked(page, (MARGIN, y + 36), t("styles", list=", ".join(styles)).upper(), size=8)
 
     band(page)
 
@@ -570,7 +572,7 @@ def main() -> int:
     out = out_dir / f"{t('filename')}-{slug}-{datetime.date.today().isoformat()}.pdf"
 
     doc = pymupdf.open()
-    cover(doc, lead, len(items), styles)
+    cover(doc, lead, len(items))
     for i, item in enumerate(items, start=1):
         spread(doc, item, i, len(items))
     closing(doc, lead)
