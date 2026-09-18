@@ -1,0 +1,849 @@
+<title>Reports en otro Mac</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap">
+
+<style>
+  :root {
+    --paper:      #F2F5F3;
+    --surface:    #E4ECE9;
+    --surface-2:  #D9E4E2;
+    --ink:        #12211F;
+    --ink-soft:   #47605C;
+    --ink-faint:  #7B918D;
+    --teal:       #2E8189;
+    --teal-deep:  #1F5F66;
+    --hair:       #C3D3CF;
+    --warn-bg:    #FBF1DF;
+    --warn-line:  #C79327;
+    --warn-ink:   #6E4E0C;
+    --stop-bg:    #FBEBE9;
+    --stop-line:  #B5504A;
+    --stop-ink:   #7A2B26;
+    --term-bg:    #12211F;
+    --term-ink:   #DCE9E5;
+    --term-dim:   #7FA09A;
+    --term-teal:  #7FD0D6;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #0E1917;
+      --surface:    #172522;
+      --surface-2:  #1E2E2B;
+      --ink:        #E6EFEC;
+      --ink-soft:   #A3B8B4;
+      --ink-faint:  #6C827E;
+      --teal:       #6FC0C7;
+      --teal-deep:  #9BD7DC;
+      --hair:       #2A3B38;
+      --warn-bg:    #241D0E;
+      --warn-line:  #A17A20;
+      --warn-ink:   #E4C67E;
+      --stop-bg:    #251413;
+      --stop-line:  #9B4741;
+      --stop-ink:   #E9A49E;
+      --term-bg:    #050D0C;
+      --term-ink:   #DCE9E5;
+      --term-dim:   #6C8A85;
+      --term-teal:  #7FD0D6;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:      #0E1917;
+    --surface:    #172522;
+    --surface-2:  #1E2E2B;
+    --ink:        #E6EFEC;
+    --ink-soft:   #A3B8B4;
+    --ink-faint:  #6C827E;
+    --teal:       #6FC0C7;
+    --teal-deep:  #9BD7DC;
+    --hair:       #2A3B38;
+    --warn-bg:    #241D0E;
+    --warn-line:  #A17A20;
+    --warn-ink:   #E4C67E;
+    --stop-bg:    #251413;
+    --stop-line:  #9B4741;
+    --stop-ink:   #E9A49E;
+    --term-bg:    #050D0C;
+    --term-ink:   #DCE9E5;
+    --term-dim:   #6C8A85;
+    --term-teal:  #7FD0D6;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Public Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 50rem;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 0 72px;
+  }
+
+  /* ---------- progress bar ---------- */
+
+  .topbar {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 10;
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--hair);
+  }
+  .topbar-inner {
+    max-width: 50rem;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .topbar-label {
+    font-family: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    white-space: nowrap;
+  }
+  .track {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--hair);
+    overflow: hidden;
+  }
+  .track > span {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: var(--teal);
+    transition: width .35s ease;
+  }
+  .count {
+    font-family: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--teal);
+    white-space: nowrap;
+  }
+
+  /* ---------- masthead ---------- */
+
+  header.mast { padding-block: 48px 8px; }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: "Bricolage Grotesque", -apple-system, sans-serif;
+    font-weight: 700;
+    font-size: clamp(2rem, 6vw, 3rem);
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+    margin: 0 0 18px;
+  }
+  .standfirst {
+    font-size: 1.0625rem;
+    color: var(--ink-soft);
+    max-width: 38rem;
+    margin: 0;
+  }
+  .meta {
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1px solid var(--hair);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    font-family: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+    font-size: 11.5px;
+    color: var(--ink-faint);
+  }
+  .meta b { color: var(--ink-soft); font-weight: 600; }
+
+  /* ---------- sections ---------- */
+
+  h2 {
+    font-family: "Bricolage Grotesque", -apple-system, sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    margin: 56px 0 14px;
+  }
+  h3 {
+    font-family: "Bricolage Grotesque", -apple-system, sans-serif;
+    font-weight: 600;
+    font-size: 1.0625rem;
+    margin: 26px 0 8px;
+  }
+  p { margin: 0 0 14px; }
+  a { color: var(--teal-deep); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; border-radius: 3px; }
+
+  code {
+    font-family: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+    font-size: 0.875em;
+    background: var(--surface);
+    border: 1px solid var(--hair);
+    border-radius: 4px;
+    padding: 0.08em 0.34em;
+    word-break: break-word;
+  }
+
+  /* ---------- the needs list ---------- */
+
+  .needs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--hair);
+    border: 1px solid var(--hair);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .needs li {
+    background: var(--surface);
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    gap: 4px 18px;
+  }
+  .needs dt, .needs .k {
+    font-family: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal);
+    padding-top: 4px;
+  }
+  .needs .v { font-size: 0.9375rem; color: var(--ink-soft); }
+  .needs .v strong { color: var(--ink); font-weight: 600; }
+  @media (max-width: 30rem) {
+    .needs li { grid-template-columns: 1fr; gap: 2px; }
+    .needs .k { padding-top: 0; }
+  }
+
+  /* ---------- steps ---------- */
+
+  ol.steps { list-style: none; margin: 0; padding: 0; }
+
+  .step {
+    display: grid;
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+    gap: 0 18px;
+    padding-block: 30px;
+    border-top: 1px solid var(--hair);
+  }
+  .step:first-child { border-top: none; }
+
+  .num {
+    font-family: "Bricolage Grotesque", -apple-system, sans-serif;
+    font-weight: 700;
+    font-size: 1.75rem;
+    line-height: 1.15;
+    color: var(--teal);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .step.done .num { color: var(--ink-faint); }
+
+  .step-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .step h3 { margin: 0 0 6px; font-size: 1.25rem; font-weight: 700; }
+  .step.done h3 { color: var(--ink-faint); }
+
+  .who {
+    font-family: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    padding: 2px 9px;
+    white-space: nowrap;
+  }
+  .who.me { color: var(--teal); border-color: color-mix(in srgb, var(--teal) 40%, transparent); }
+
+  .step > .body { grid-column: 2; min-width: 0; }
+  .step p { font-size: 0.9375rem; }
+
+  .tick {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 0.8125rem;
+    color: var(--ink-faint);
+    cursor: pointer;
+    user-select: none;
+    width: fit-content;
+  }
+  .tick input { accent-color: var(--teal); width: 15px; height: 15px; cursor: pointer; margin: 0; }
+
+  @media (max-width: 30rem) {
+    .step { grid-template-columns: 2.25rem minmax(0, 1fr); gap: 0 12px; }
+    .num { font-size: 1.375rem; }
+    .step h3 { font-size: 1.125rem; }
+  }
+
+  /* ---------- terminal ---------- */
+
+  .term {
+    min-width: 0;
+    background: var(--term-bg);
+    border-radius: 8px;
+    margin: 14px 0;
+    overflow: hidden;
+  }
+  .term-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 10px 7px 13px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .term-where {
+    font-family: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--term-dim);
+  }
+  .copy {
+    font-family: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    color: var(--term-dim);
+    background: transparent;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 5px;
+    padding: 3px 9px;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+  }
+  .copy:hover { color: var(--term-teal); border-color: rgba(127,208,214,.45); }
+  .copy.ok { color: var(--term-teal); border-color: rgba(127,208,214,.45); }
+
+  .term pre {
+    margin: 0;
+    padding: 13px;
+    overflow-x: auto;
+    font-family: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--term-ink);
+    tab-size: 2;
+  }
+  .term pre .c { color: var(--term-dim); }
+  .term pre .p { color: var(--term-teal); }
+
+  /* ---------- callouts ---------- */
+
+  .note {
+    border-left: 3px solid var(--teal);
+    background: var(--surface);
+    border-radius: 0 6px 6px 0;
+    padding: 12px 15px;
+    margin: 14px 0;
+    font-size: 0.875rem;
+    color: var(--ink-soft);
+  }
+  .note.warn { border-left-color: var(--warn-line); background: var(--warn-bg); color: var(--warn-ink); }
+  .note.stop { border-left-color: var(--stop-line); background: var(--stop-bg); color: var(--stop-ink); }
+  .note strong { color: inherit; font-weight: 600; }
+  .note :last-child { margin-bottom: 0; }
+  .note p { font-size: inherit; }
+
+  .check {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--hair);
+    font-size: 0.8125rem;
+    color: var(--ink-soft);
+  }
+  .check b {
+    font-family: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal);
+    font-weight: 600;
+    display: block;
+    margin-bottom: 3px;
+  }
+
+  /* ---------- trouble table ---------- */
+
+  .trouble { display: grid; gap: 1px; background: var(--hair); border: 1px solid var(--hair); border-radius: 8px; overflow: hidden; }
+  .trouble > div { background: var(--surface); padding: 13px 16px; }
+  .trouble .sym { font-weight: 600; font-size: 0.9375rem; margin-bottom: 3px; }
+  .trouble .fix { font-size: 0.875rem; color: var(--ink-soft); }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--hair);
+    font-family: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+    font-size: 11px;
+    color: var(--ink-faint);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <span class="topbar-label">Progreso</span>
+    <span class="track"><span id="bar"></span></span>
+    <span class="count" id="count">0 / 8</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header class="mast">
+    <p class="eyebrow">Think Things · Reports</p>
+    <h1>Poner el dashboard en el Mac de tu hermano</h1>
+    <p class="standfirst">
+      Ocho pasos, de una terminal limpia a la tabla de leads abierta en el navegador.
+      Están en orden: cada uno da por hecho el anterior.
+    </p>
+    <div class="meta">
+      <span><b>Tiempo</b> 30–45 min (casi todo esperando descargas)</span>
+      <span><b>Requiere</b> macOS · Apple Silicon o Intel</span>
+      <span><b>Repo</b> soymachine/reports-cms</span>
+    </div>
+  </header>
+
+  <h2>Lo que tienes que darle tú</h2>
+  <p>
+    Tres cosas que no viajan en el repositorio. Sin las dos primeras no hay instalación
+    que valga, así que resuélvelas antes de sentarte con él.
+  </p>
+
+  <ul class="needs">
+    <li>
+      <span class="k">Acceso</span>
+      <span class="v"><strong>El repositorio es privado.</strong> Invítale como colaborador en GitHub
+      (Settings → Collaborators) con su cuenta, o tendrá un <code>403</code> al clonar.</span>
+    </li>
+    <li>
+      <span class="k">Datos</span>
+      <span class="v"><strong>El fichero <code>leads.db</code></strong>, que está en <code>.gitignore</code>
+      porque contiene empresas y contactos reales. Pásaselo por AirDrop o disco. Sin él el dashboard
+      arranca, pero todas las pantallas dan error.</span>
+    </li>
+    <li>
+      <span class="k">Opcional</span>
+      <span class="v">Las carpetas <code>pdfs/</code> y <code>generated/</code> si quieres que vea el
+      trabajo ya hecho. Son unos 300 MB y también están fuera de git.</span>
+    </li>
+  </ul>
+
+  <div class="note" style="margin-top:20px">
+    <p><strong>Para lo que él va a hacer, no necesita Magnific.</strong> Subir pares
+    antes / después hechos a mano y sacar el PDF comparativo funciona sin cuenta de Magnific,
+    sin Hermes y sin gastar un solo crédito. La generación con IA es la única parte que los pide,
+    y va al final como paso opcional.</p>
+  </div>
+
+  <h2>Los ocho pasos</h2>
+
+  <ol class="steps" id="steps">
+
+    <li class="step" data-step="1">
+      <div class="num">01</div>
+      <div class="body">
+        <div class="step-head">
+          <h3>Fusiona la rama a <code>main</code></h3>
+          <span class="who me">en tu Mac</span>
+        </div>
+        <p>
+          Todo lo nuevo —los pares a mano incluidos— vive en una rama con ocho commits que
+          <code>main</code> no tiene. Si clona <code>main</code> tal y como está hoy, se llevará una
+          versión sin la función que necesita.
+        </p>
+        <div class="term">
+          <div class="term-head"><span class="term-where">Terminal · tu Mac</span><button class="copy" type="button">Copiar</button></div>
+<pre><span class="c"># desde la carpeta del proyecto en tu ordenador</span>
+git checkout main
+git merge claude/before-after-improvements-nbpstf
+git push origin main</pre>
+        </div>
+        <p>
+          Si prefieres no tocar <code>main</code> todavía, sáltate este paso y que él clone
+          la rama directamente: se indica en el paso 4.
+        </p>
+        <div class="check"><b>Comprobación</b> <code>git log --oneline -1 origin/main</code> muestra el último commit de la rama, no «Primer commit».</div>
+        <label class="tick"><input type="checkbox"> Hecho</label>
+      </div>
+    </li>
+
+    <li class="step" data-step="2">
+      <div class="num">02</div>
+      <div class="body">
+        <div class="step-head">
+          <h3>Herramientas de desarrollo de Apple</h3>
+          <span class="who">en su Mac</span>
+        </div>
+        <p>
+          Trae <code>git</code> y el compilador. Hace falta para Homebrew y para que
+          <code>npm</code> pueda construir la pieza nativa de la base de datos si no encuentra
+          binario ya hecho para su Mac.
+        </p>
+        <div class="term">
+          <div class="term-head"><span class="term-where">Terminal</span><button class="copy" type="button">Copiar</button></div>
+<pre>xcode-select --install</pre>
+        </div>
+        <p>Se abre una ventana del sistema: aceptar y esperar. Si ya estaban instaladas, responde que no hay nada que hacer y sigues igual.</p>
+        <div class="check"><b>Comprobación</b> <code>git --version</code> responde con un número.</div>
+        <label class="tick"><input type="checkbox"> Hecho</label>
+      </div>
+    </li>
+
+    <li class="step" data-step="3">
+      <div class="num">03</div>
+      <div class="body">
+        <div class="step-head">
+          <h3>Homebrew</h3>
+          <span class="who">en su Mac</span>
+        </div>
+        <p>El gestor de paquetes con el que se instala todo lo demás.</p>
+        <div class="term">
+          <div class="term-head"><span class="term-where">Terminal</span><button class="copy" type="button">Copiar</button></div>
+<pre>/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"</pre>
+        </div>
+        <div class="note warn">
+          <p>Al terminar, el instalador imprime dos líneas <code>eval "$(...brew shellenv)"</code>
+          bajo un aviso de <em>Next steps</em>. <strong>Hay que copiarlas y ejecutarlas</strong>, o
+          <code>brew</code> no existirá al abrir la siguiente terminal.</p>
+        </div>
+        <div class="check"><b>Comprobación</b> <code>brew --version</code> responde.</div>
+        <label class="tick"><input type="checkbox"> Hecho</label>
+      </div>
+    </li>
+
+    <li class="step" data-step="4">
+      <div class="num">04</div>
+      <div class="body">
+        <div class="step-head">
+          <h3>Node, Python y las dos herramientas de imagen</h3>
+          <span class="who">en su Mac</span>
+        </div>
+        <p>
+          Una sola orden. <strong>poppler</strong> convierte las páginas del PDF en imágenes
+          —es lo que hay detrás del botón «Ver páginas»— y <strong>tesseract</strong> lee las
+          cifras del rediseño para comprobar que no se ha perdido ninguna.
+        </p>
+        <div class="term">
+          <div class="term-head"><span class="term-where">Terminal</span><button class="copy" type="button">Copiar</button></div>
+<pre>brew install node python@3.12 poppler tesseract</pre>
+        </div>
+        <div class="check"><b>Comprobación</b> las cuatro responden: <code>node --version</code> (v22 o superior), <code>python3.12 --version</code>, <code>pdftoppm -v</code>, <code>tesseract --version</code>.</div>
+        <label class="tick"><input type="checkbox"> Hecho</label>
+      </div>
+    </li>
+
+    <li class="step" data-step="5">
+      <div class="num">05</div>
+      <div class="body">
+        <div class="step-head">
+          <h3>Clonar el proyecto</h3>
+          <span class="who">en su Mac</span>
+        </div>
+        <p>La carpeta puede ir donde quiera; aquí va en <code>~/Trabajo</code>.</p>
+        <div class="term">
+          <div class="term-head"><span class="term-where">Terminal</span><button class="copy" type="button">Copiar</button></div>
+<pre>mkdir -p ~/Trabajo &amp;&amp; cd ~/Trabajo
+git clone https://github.com/soymachine/reports-cms.git
+cd reports-cms</pre>
+        </div>
+        <p>
+          GitHub le pedirá su usuario y un <em>token</em> de acceso personal —no la contraseña de la
+          cuenta—. Si te saltaste el paso 1, que se cambie ahora a la rama:
+        </p>
+        <div class="term">
+          <div class="term-head"><span class="term-where">Terminal · solo si no fusionaste</span><button class="copy" type="button">Copiar</button></div>
+<pre>git checkout claude/before-after-improvements-nbpstf</pre>
+        </div>
+        <div class="check"><b>Comprobación</b> <code>ls</code> dentro de la carpeta muestra <code>dashboard</code>, <code>scripts</code>, <code>settings.json</code> y <code>start.command</code>.</div>
+        <label class="tick"><input type="checkbox"> Hecho</label>
+      </div>
+    </li>
+
+    <li class="step" data-step="6">
+      <div class="num">06</div>
+      <div class="body">
+        <div class="step-head">
+          <h3>El entorno de Python</h3>
+          <span class="who">en su Mac</span>
+        </div>
+        <p>
+          El dashboard llama a los scripts de Python por una ruta fija, <code>.venv/bin/python</code>
+          dentro del proyecto. Tiene que crearse ahí, con ese nombre.
+        </p>
+        <div class="term">
+          <div class="term-head"><span class="term-where">Terminal · dentro de reports-cms</span><button class="copy" type="button">Copiar</button></div>
+<pre>"$(brew --prefix)/bin/python3.12" -m venv .venv
+.venv/bin/pip install --upgrade pip
+.venv/bin/pip install openpyxl pymupdf pillow pytesseract</pre>
+        </div>
+        <div class="check"><b>Comprobación</b> <code>.venv/bin/python -c "import openpyxl, pymupdf, PIL, pytesseract; print('ok')"</code> imprime <code>ok</code>.</div>
+        <label class="tick"><input type="checkbox"> Hecho</label>
+      </div>
+    </li>
+
+    <li class="step" data-step="7">
+      <div class="num">07</div>
+      <div class="body">
+        <div class="step-head">
+          <h3>Copiar la base de datos</h3>
+          <span class="who me">de tu Mac al suyo</span>
+        </div>
+        <p>
+          <code>leads.db</code> va a la <strong>raíz del proyecto</strong>, al lado de
+          <code>settings.json</code>. Es el único fichero imprescindible que no está en git.
+        </p>
+        <div class="note stop">
+          <p><strong>Antes de copiarlo, cierra el dashboard en tu Mac.</strong> SQLite deja
+          ficheros <code>leads.db-wal</code> y <code>leads.db-shm</code> con cambios todavía sin
+          volcar; si copias la base con el servidor abierto, puede llegarle incompleta.</p>
+        </div>
+        <p>
+          Si además quieres que vea los reports y los rediseños ya hechos, copia las carpetas
+          <code>pdfs/</code> y <code>generated/</code> enteras al mismo sitio.
+        </p>
+        <div class="check"><b>Comprobación</b> <code>ls -lh leads.db</code> desde la raíz del proyecto muestra un fichero de varios cientos de KB o más.</div>
+        <label class="tick"><input type="checkbox"> Hecho</label>
+      </div>
+    </li>
+
+    <li class="step" data-step="8">
+      <div class="num">08</div>
+      <div class="body">
+        <div class="step-head">
+          <h3>Arrancar</h3>
+          <span class="who">en su Mac</span>
+        </div>
+        <p>
+          Doble clic en <code>start.command</code> desde el Finder, o desde la terminal:
+        </p>
+        <div class="term">
+          <div class="term-head"><span class="term-where">Terminal · dentro de reports-cms</span><button class="copy" type="button">Copiar</button></div>
+<pre>./start.command</pre>
+        </div>
+        <p>
+          La primera vez instala las dependencias del dashboard —tarda unos minutos y no dice
+          gran cosa mientras lo hace— y luego abre solo
+          <code>http://localhost:4321</code>. Para pararlo, <code>Ctrl+C</code> en esa ventana.
+          Mientras esté abierta, el dashboard funciona.
+        </p>
+        <div class="check"><b>Comprobación</b> el navegador abre la tabla de leads con datos. Eso significa que Node, la base de datos y el servidor están bien.</div>
+        <label class="tick"><input type="checkbox"> Hecho</label>
+      </div>
+    </li>
+
+  </ol>
+
+  <h2>Probar que está todo, no solo que arranca</h2>
+  <p>
+    Que cargue la tabla solo demuestra media instalación. Estas tres pruebas tocan cada una
+    una pieza distinta, y son justo el camino que él va a recorrer cada día:
+  </p>
+
+  <div class="trouble">
+    <div>
+      <div class="sym">Abrir un lead con PDF y pulsar «Ver páginas»</div>
+      <div class="fix">Si aparecen las miniaturas de las páginas, <strong>poppler</strong> está bien instalado.</div>
+    </div>
+    <div>
+      <div class="sym">«Pares a mano» → subir un original y una imagen nueva</div>
+      <div class="fix">Si la pareja aparece en Antes / Después como un estilo más, el circuito completo funciona. Si el par sale marcado con «sin QC», falta <strong>tesseract</strong>.</div>
+    </div>
+    <div>
+      <div class="sym">Pulsar «PDF comparativo»</div>
+      <div class="fix">Si se descarga el deck con la portada de Think Things, <strong>PyMuPDF</strong> y las tipografías están en su sitio.</div>
+    </div>
+  </div>
+
+  <h2>Opcional: generar con Magnific</h2>
+  <p>
+    Solo si va a rediseñar con IA en lugar de a mano. Necesita el CLI de Hermes instalado y una
+    sesión de Magnific abierta en <em>su</em> usuario:
+  </p>
+  <div class="term">
+    <div class="term-head"><span class="term-where">Terminal</span><button class="copy" type="button">Copiar</button></div>
+<pre>hermes mcp login magnific</pre>
+  </div>
+  <p>
+    El dashboard lee esa sesión de <code>~/.hermes/mcp-tokens/magnific.json</code>. Los créditos se
+    cargan a la cuenta que haga el login, así que decidid antes si va con la vuestra o con una suya.
+  </p>
+
+  <h2>Lo que no va a funcionar en su Mac</h2>
+  <p>Dos cosas, y es mejor que lo sepa antes de buscar el fallo donde no está:</p>
+  <div class="trouble">
+    <div>
+      <div class="sym">El botón «Lanzar el agente ahora»</div>
+      <div class="fix">Ejecuta una tarea programada de Hermes que vive en tu ordenador, identificada por un id concreto. En el suyo no existe.</div>
+    </div>
+    <div>
+      <div class="sym">Generar rediseños sin el paso opcional</div>
+      <div class="fix">Sin sesión de Magnific la generación falla con un aviso de autenticación. Todo lo demás —pares a mano, comparador, deck, email— sigue funcionando.</div>
+    </div>
+  </div>
+
+  <div class="note stop" style="margin-top:22px">
+    <p><strong>Dos ordenadores, dos bases de datos.</strong> No hay sincronización de ninguna clase:
+    en cuanto los dos trabajéis sobre vuestra copia, se separan y no hay forma automática de
+    juntarlas. Decidid quién manda sobre <code>leads.db</code> — lo más simple es que sea tuya y que
+    él trabaje sobre una copia para sus rediseños, o al revés, pero no las dos a la vez.</p>
+  </div>
+
+  <h2>Si algo falla</h2>
+  <div class="trouble">
+    <div>
+      <div class="sym">Todas las pantallas dan error y la tabla sale vacía</div>
+      <div class="fix">Falta <code>leads.db</code> en la raíz del proyecto, o está en otra carpeta. Tiene que estar junto a <code>settings.json</code>.</div>
+    </div>
+    <div>
+      <div class="sym">macOS no deja abrir <code>start.command</code></div>
+      <div class="fix">Clic derecho sobre el fichero → <em>Abrir</em> → <em>Abrir</em> de nuevo en el aviso. Si dice que no tiene permisos: <code>chmod +x start.command</code>.</div>
+    </div>
+    <div>
+      <div class="sym"><code>npm install</code> falla compilando <code>better-sqlite3</code></div>
+      <div class="fix">Le faltan las herramientas del paso 2: <code>xcode-select --install</code> y volver a lanzarlo.</div>
+    </div>
+    <div>
+      <div class="sym">«Ya hay un servidor escuchando en el puerto 4321»</div>
+      <div class="fix">Hay otra ventana del dashboard abierta. Ciérrala, o arranca en otro puerto: <code>PORT=4322 ./start.command</code>.</div>
+    </div>
+    <div>
+      <div class="sym">Los pares salen siempre con «sin QC»</div>
+      <div class="fix">Falta <code>tesseract</code> (paso 4) o alguno de los paquetes de Python (paso 6). No rompe nada: solo deja de comprobar las cifras.</div>
+    </div>
+    <div>
+      <div class="sym">«Ver páginas» no muestra nada</div>
+      <div class="fix">Falta <code>poppler</code> (paso 4). Comprueba con <code>pdftoppm -v</code>.</div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Think Things · estudio de diseño gráfico, Barcelona</span>
+    <span>Guía de instalación · 18 septiembre 2026</span>
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    'use strict';
+
+    /* ---- copiar comandos ---- */
+    document.querySelectorAll('.copy').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var pre = btn.closest('.term').querySelector('pre');
+        var text = pre.innerText.split('\n').filter(function (l) {
+          return l.trim() && l.trim().charAt(0) !== '#';
+        }).join('\n');
+
+        var done = function () {
+          btn.textContent = 'Copiado';
+          btn.classList.add('ok');
+          setTimeout(function () { btn.textContent = 'Copiar'; btn.classList.remove('ok'); }, 1600);
+        };
+
+        // navigator.clipboard no existe al abrir el fichero desde el disco:
+        // se cae a la selección, que deja el comando listo para ⌘C
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, function () { select(pre, btn); });
+        } else {
+          select(pre, btn);
+        }
+      });
+    });
+
+    function select(pre, btn) {
+      try {
+        var range = document.createRange();
+        range.selectNodeContents(pre);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        btn.textContent = 'Pulsa ⌘C';
+        btn.classList.add('ok');
+        setTimeout(function () { btn.textContent = 'Copiar'; btn.classList.remove('ok'); }, 2600);
+      } catch (e) { /* sin selección tampoco pasa nada: el comando está a la vista */ }
+    }
+
+    /* ---- progreso, recordado en este navegador ---- */
+    var KEY = 'tt-instalacion-mac-v1';
+    var steps = Array.prototype.slice.call(document.querySelectorAll('.step'));
+    var bar = document.getElementById('bar');
+    var count = document.getElementById('count');
+
+    var saved = {};
+    try {
+      saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {};
+    } catch (e) { saved = {}; }
+
+    function paint() {
+      var done = 0;
+      steps.forEach(function (step) {
+        var on = step.querySelector('input').checked;
+        step.classList.toggle('done', on);
+        if (on) done++;
+      });
+      bar.style.width = (done / steps.length * 100) + '%';
+      count.textContent = done + ' / ' + steps.length;
+    }
+
+    steps.forEach(function (step) {
+      var id = step.getAttribute('data-step');
+      var box = step.querySelector('input');
+      box.id = 'paso-' + id;
+      box.checked = saved[id] === true;
+      box.addEventListener('change', function () {
+        saved[id] = box.checked;
+        try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) { /* sin memoria, sigue funcionando */ }
+        paint();
+      });
+    });
+
+    paint();
+  })();
+</script>

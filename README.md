@@ -182,6 +182,12 @@ La primera generación de rediseños requiere autorizar el MCP de Magnific una v
 hermes mcp login magnific
 ```
 
+## Instalar en otro Mac
+
+`documentacion/instalacion-mac.html` es la guía paso a paso para dejar el dashboard
+funcionando en un ordenador nuevo: se abre con doble clic, lleva las comprobaciones de
+cada paso y avisa de lo que no viaja en el repositorio (`leads.db`, `pdfs/`, `generated/`).
+
 ## Requisitos del sistema
 
 - Python: `.venv` (3.12, openpyxl) — recrear con `/opt/homebrew/bin/python3.12 -m venv .venv`
