@@ -3,11 +3,12 @@ import {
   X, Globe, Linkedin, Mail, FileText, Loader2, Download, Images, Wand2,
   Copy, Save, ExternalLink, Check, ChevronLeft, ChevronRight, Trash2, FolderOpen,
   Star, Gauge, Sparkles, ArrowUp, ArrowDown, ArrowUpDown, FileDown, Palette, Coins, Eye, ListChecks,
-  ShieldAlert, ShieldCheck, Maximize2, Rows3, History, ImagePlus,
+  ShieldAlert, ShieldCheck, Maximize2, Rows3, History, ImagePlus, FilePlus2,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import BeforeAfterModal from './BeforeAfterModal';
 import ManualPairs from './ManualPairs';
+import AddPdf from './AddPdf';
 import type { Lead, PageThumb, StylePreset, GeneratedItem, PdfItem, PaletteColor, MagnificModel, ModelCatalogResponse, Job } from '../lib/types';
 import { fileUrl, fmtDate, decodeHtml, creditsPerImage, pageThumb } from '../lib/types';
 import SmartImg from './SmartImg';
@@ -781,6 +782,7 @@ export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses,
 
   // which report has the "pairs made by hand" panel open
   const [manualFor, setManualFor] = useState<string | null>(null);
+  const [addingPdf, setAddingPdf] = useState(false);
   const [draft, setDraft] = useState(lead.email_draft ?? '');
   const [draftOpen, setDraftOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -1544,11 +1546,32 @@ export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses,
               <section>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-[10px] uppercase tracking-widest text-zinc-500">Reports (PDFs)</h3>
-                  <button onClick={findPdfs} disabled={pdfSearching} className={btnPrimary}>
-                    {pdfSearching ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
-                    {pdfSearching ? 'Buscando…' : 'Buscar PDFs de reports'}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setAddingPdf((v) => !v)}
+                      title="Añadir un PDF que hayas encontrado tú"
+                      className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-all duration-200 active:scale-95 ${
+                        addingPdf
+                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                          : 'border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:border-emerald-500/60 hover:text-emerald-600 dark:hover:text-emerald-400'
+                      }`}
+                    >
+                      <FilePlus2 size={12} /> Añadir a mano
+                    </button>
+                    <button onClick={findPdfs} disabled={pdfSearching} className={btnPrimary}>
+                      {pdfSearching ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+                      {pdfSearching ? 'Buscando…' : 'Buscar PDFs de reports'}
+                    </button>
+                  </div>
                 </div>
+
+                {addingPdf && (
+                  <AddPdf
+                    leadId={lead.id}
+                    onAdded={(fresh) => onPatch(lead.id, { pdfs: fresh.pdfs })}
+                    onClose={() => setAddingPdf(false)}
+                  />
+                )}
                 {pdfMsg && <div className="text-[11px] text-zinc-500 mb-2">{pdfMsg}</div>}
 
                 {lead.pdfs.length > 1 && (

@@ -71,6 +71,12 @@ marcan y se dejan como registro de decisiones.
     De paso, `qc_redesign.py` ya no revienta cuando el PDF de origen no está en
     disco: devolvía un traceback en vez de JSON y dejaba al que llama sin nada.
 
+16. **Reports añadidos a mano** — subir un PDF solo se podía al crear el lead, y
+    desde la ficha de uno existente no había manera. Ahora hay dos vías: fichero
+    desde el disco o pegar la dirección y que el dashboard lo descargue. No pasan
+    el filtro de calidad (la decisión es humana) pero sí el enriquecido de páginas
+    y fecha, así que el resto del circuito no nota la diferencia.
+
 ## Aplazadas (decisión del 19/08/2026)
 
 ### 4. Cerrar el bucle comercial: enviar y seguir

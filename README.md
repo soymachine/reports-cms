@@ -42,6 +42,23 @@ El saldo real de la cuenta aparece en la barra lateral.
 Órdenes de magnitud por imagen: Nano Banana 2 a 2k = 75 cr., Nano Banana 2 Lite = 60 cr.,
 Seedream 5 Pro 2k = 100 cr., GPT 2 2k medium = 260 cr. (y 700 cr. en `high`).
 
+## Añadir reports a mano
+
+La búsqueda automática falla o se queda corta a menudo, así que cada lead tiene un
+botón **Añadir a mano** junto a la búsqueda, con dos entradas:
+
+- **Desde el ordenador**: uno o varios PDFs que ya tengas descargados.
+- **Desde una dirección web**: pegas el enlace y el dashboard lo descarga él
+  (`PUT /api/upload-pdf`), comprobando que lo que hay ahí es de verdad un PDF por
+  sus bytes de cabecera, no por lo que diga el servidor. Rechaza direcciones que
+  no sean http(s) públicas, para que nadie pueda usar el panel como puente a la
+  red local si algún día se expone.
+
+Los añadidos a mano **no pasan el filtro de calidad** de la búsqueda automática —si
+lo eliges tú, entra— pero sí reciben sus páginas, ratio visual y fecha de
+publicación (`scripts/backfill_pdf_meta.py`), así que el radar y el selector de
+páginas funcionan igual. Se distinguen por `source: "manual"`.
+
 ## Pares hechos a mano
 
 No todo rediseño sale de Magnific: a veces el estudio extrae las páginas del PDF
