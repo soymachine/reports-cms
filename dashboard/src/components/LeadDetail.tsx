@@ -736,6 +736,8 @@ function sortPdfs(pdfs: PdfItem[], generated: GeneratedItem[], key: PdfSortKey, 
 export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses, stylePresets, maxPages, focusPdf }: Props) {
   const [notes, setNotes] = useState(lead.notes ?? '');
   const [nextAction, setNextAction] = useState(lead.next_action ?? '');
+  const [websiteField, setWebsiteField] = useState(lead.website ?? '');
+  const [websiteSaved, setWebsiteSaved] = useState(false);
   const [pdfSearching, setPdfSearching] = useState(false);
   const [pdfMsg, setPdfMsg] = useState<string | null>(null);
 
@@ -1316,6 +1318,23 @@ export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses,
     : null;
 
   const website = lead.website ? (lead.website.startsWith('http') ? lead.website : `https://${lead.website}`) : null;
+
+  /** El dominio que acabará rastreando pdf_finder.py, tal y como lo deduce él. */
+  const crawlDomain = (raw: string): string => {
+    const v = raw.trim();
+    if (!v) return '';
+    try {
+      return new URL(v.startsWith('http') ? v : `https://${v}`).hostname.replace(/^www\./, '');
+    } catch {
+      return '';
+    }
+  };
+
+  const saveWebsite = async () => {
+    await onPatch(lead.id, { website: websiteField.trim() });
+    setWebsiteSaved(true);
+    window.setTimeout(() => setWebsiteSaved(false), 1800);
+  };
   const timeline = [...(lead.timeline ?? [])].sort((a, b) => String(b.date).localeCompare(String(a.date)));
 
   return (
@@ -1438,8 +1457,8 @@ export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses,
                   )}
                 </div>
 
-                {/* status + next action in the same row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* status + website + next action in the same row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Estado</div>
                     <Select value={lead.status} onValueChange={(v) => onPatch(lead.id, { status: v })}>
@@ -1450,6 +1469,30 @@ export default function LeadDetail({ lead, onClose, onPatch, onDelete, statuses,
                         {statuses.map((st) => <SelectItem key={st} value={st}>{st}</SelectItem>)}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Web</div>
+                    <div className="flex gap-1.5">
+                      <input
+                        value={websiteField}
+                        onChange={(e) => setWebsiteField(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') saveWebsite(); }}
+                        placeholder="eurec.be"
+                        className={inputCls}
+                      />
+                      <button onClick={saveWebsite} className={btnGhost} title="Guardar la web">
+                        {websiteSaved ? <Check size={12} className="text-emerald-500" /> : <Save size={12} />}
+                      </button>
+                    </div>
+                    {crawlDomain(websiteField) ? (
+                      <div className="mt-1 text-[10px] text-zinc-500">
+                        Se rastreará <span className="text-emerald-600 dark:text-emerald-400">{crawlDomain(websiteField)}</span>
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-[10px] text-amber-600 dark:text-amber-400">
+                        Sin web, la búsqueda de PDFs solo puede buscar por nombre
+                      </div>
+                    )}
                   </div>
                   <div>
                     <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Próxima acción</div>

@@ -290,6 +290,10 @@ export default function Dashboard() {
 
       {selected && (
         <LeadDetail
+          // remonta al cambiar de lead: los campos de texto (web, notas, próxima
+          // acción, borrador) guardan borrador local y si no, al saltar con ↑/↓
+          // seguirías viendo el texto del lead anterior
+          key={selected.id}
           lead={selected}
           onClose={closeLead}
           onPatch={patchLead}
